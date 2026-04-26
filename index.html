@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>足跡管理者中心 - 隱私設定版</title>
+    <title>足跡管理者中心 - 支援超連結版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -95,6 +95,10 @@
         .nav-active { background-color: #6366f1 !important; color: white !important; }
         .toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); padding: 12px 24px; background: #1e293b; color: white; border-radius: 12px; z-index: 9999; display: none; font-size: 14px; }
 
+        /* 連結樣式 */
+        .story-link { color: #6366f1; text-decoration: underline; font-weight: 700; }
+        .story-link:hover { color: #4f46e5; }
+
         /* 切換開關樣式 */
         .toggle-btn {
             position: relative;
@@ -149,16 +153,13 @@
             </section>
 
             <section class="layer-3">
-                <!-- 管理後台按鈕置中 -->
                 <div class="p-4 flex justify-center shrink-0 bg-white border-b border-slate-50">
                     <div class="flex gap-2 w-full max-w-[320px]">
                         <button onclick="switchViewMode('public')" id="btnPublic" class="flex-1 py-2.5 rounded-xl text-[11px] font-black transition-all nav-active text-center">公開展區</button>
                         <button onclick="switchViewMode('private')" id="btnPrivate" class="hidden flex-1 py-2.5 rounded-xl text-[11px] font-black text-slate-400 bg-slate-50 border border-slate-100 transition-all text-center">我的管理後台</button>
                     </div>
                 </div>
-                <div id="locationScroller" class="flex-1 custom-scrollbar bg-white">
-                    <!-- 清單與年份標籤將注入於此 -->
-                </div>
+                <div id="locationScroller" class="flex-1 custom-scrollbar bg-white"></div>
             </section>
         </div>
 
@@ -192,6 +193,7 @@
                     <div id="cMedia" class="media-scroller custom-scrollbar"></div>
 
                     <div class="prose prose-slate max-w-none">
+                        <!-- 顯示描述的地方 -->
                         <p id="cDesc" class="text-slate-600 text-xl leading-relaxed whitespace-pre-wrap font-medium"></p>
                     </div>
                 </div>
@@ -207,7 +209,6 @@
                         <h3 class="text-2xl font-black text-slate-900">編輯內容</h3>
                     </div>
 
-                    <!-- 隱私選擇區塊 -->
                     <div class="flex items-center justify-between p-5 bg-slate-50 rounded-2xl border border-slate-100">
                         <div class="flex flex-col">
                             <span class="text-slate-900 font-black text-sm">公開展示於展區</span>
@@ -229,8 +230,8 @@
                             <input type="date" id="eDate" class="w-full p-5 rounded-2xl border border-slate-100 bg-slate-50 outline-none font-bold focus:bg-white transition-all">
                         </div>
                         <div>
-                            <label class="text-[11px] font-black text-slate-400 ml-2 mb-2 block uppercase">足跡故事</label>
-                            <textarea id="eDesc" rows="6" class="w-full p-5 rounded-2xl border border-slate-100 bg-slate-50 outline-none font-medium focus:bg-white transition-all" placeholder="在這裡寫下故事..."></textarea>
+                            <label class="text-[11px] font-black text-slate-400 ml-2 mb-2 block uppercase">足跡故事 (支援輸入網址超連結)</label>
+                            <textarea id="eDesc" rows="6" class="w-full p-5 rounded-2xl border border-slate-100 bg-slate-50 outline-none font-medium focus:bg-white transition-all" placeholder="在故事中輸入 http:// 網址將自動轉為連結..."></textarea>
                         </div>
                     </div>
 
@@ -267,6 +268,13 @@
         let viewMode = 'public';
         let unsub = null;
 
+        // 工具函式：將文字中的 URL 轉為可點擊連結
+        function linkify(text) {
+            if (!text) return "";
+            const urlPattern = /(\b(https?):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/ig;
+            return text.replace(urlPattern, '<a href="$1" target="_blank" rel="noopener noreferrer" class="story-link">$1</a>');
+        }
+
         function initMap() {
             map = L.map('map', { center: [22.3193, 114.1694], zoom: 12, zoomControl: false });
             L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png').addTo(map);
@@ -275,9 +283,7 @@
 
         window.handleAuthClick = () => {
             if (auth.currentUser) {
-                if(confirm("確定要登出嗎？")) signOut(auth).then(() => {
-                   window.location.reload();
-                });
+                if(confirm("確定要登出嗎？")) signOut(auth).then(() => window.location.reload());
             } else {
                 signInWithPopup(auth, provider).then(() => showToast("歡迎回來！")).catch(e => console.error(e));
             }
@@ -321,14 +327,9 @@
 
             unsub = onSnapshot(ref, (snap) => {
                 let rawLocations = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-                
-                // 公開展區邏輯：必須是公開且必須有日期
-                if (viewMode === 'public') {
-                    locations = rawLocations.filter(l => l.isPublic === true && l.date && l.date !== "");
-                } else {
-                    locations = rawLocations;
-                }
-
+                locations = (viewMode === 'public') 
+                    ? rawLocations.filter(l => l.isPublic === true && l.date) 
+                    : rawLocations;
                 locations.sort((a, b) => (b.date || "0000-00-00").localeCompare(a.date || "0000-00-00"));
                 renderList(); 
                 updateMarkers();
@@ -351,10 +352,6 @@
                         container.appendChild(divider);
                         lastYear = y; lastMonth = m;
                     }
-                } else if (lastYear !== "未分類") {
-                    const divider = document.createElement('div');
-                    divider.className = 'date-divider'; divider.innerHTML = `<span>未註記日期</span>`;
-                    container.appendChild(divider); lastYear = "未分類";
                 }
 
                 const div = document.createElement('div');
@@ -380,7 +377,9 @@
 
             document.getElementById('cTitle').innerText = loc.title;
             document.getElementById('cDate').innerText = loc.date || "日期未註記";
-            document.getElementById('cDesc').innerText = loc.description || "分享一段美好的回憶吧...";
+            
+            // 使用 linkify 處理故事內容並注入 HTML
+            document.getElementById('cDesc').innerHTML = linkify(loc.description || "分享一段美好的回憶吧...");
             
             const badge = document.getElementById('cBadge');
             badge.innerText = loc.isPublic ? "公開足跡" : "私人區域";
@@ -442,20 +441,11 @@
                 updatedAt: serverTimestamp()
             };
             try {
-                // 更新私有資料
                 await setDoc(doc(db, 'artifacts', appId, 'users', auth.currentUser.uid, 'locations', currentId), data, {merge:true});
-                
-                // 如果是公開，同步到公開庫；如果不是公開，從公開庫刪除（簡化邏輯：每次更新私有資料時，公開庫視情況同步）
-                const publicDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'locations', currentId);
                 if (isPublic && data.date) {
-                    // 同步到公開區（需包含經緯度與媒體資料，從當前 locations 取得）
                     const fullLoc = locations.find(l => l.id === currentId);
-                    await setDoc(publicDocRef, { ...fullLoc, ...data });
-                } else {
-                    // 若設為私人或無日期，則不顯示在公開展區（此處可實作刪除邏輯，但建議使用雲端函數或簡化處理）
-                    // 為了範例完整，這裡僅示範欄位更新，若需要正式移除，需呼叫 deleteDoc
+                    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'locations', currentId), { ...fullLoc, ...data });
                 }
-
                 showToast("更新成功"); 
                 toggleEditMode();
             } catch (e) {
