@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>個人足跡 - 記憶分享平台</title>
+    <title>個人足跡 - 公開展示平台</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -36,7 +36,7 @@
             background: #f1f5f9; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
             position: relative; border: 1px solid #e2e8f0;
         }
-        .media-img, .media-video { width: 100%; height: 100%; object-fit: cover; background: black; cursor: pointer; }
+        .media-img, .media-video { width: 100%; height: 100%; object-fit: cover; background: black; }
         
         .list-thumb {
             width: 48px; height: 48px; border-radius: 12px;
@@ -53,21 +53,13 @@
         .nav-item-active .list-icon-placeholder { background: rgba(255,255,255,0.2); color: white; }
 
         .google-auth-btn {
-            display: flex; align-items: center; gap: 8px; padding: 4px 12px;
+            display: flex; align-items: center; gap: 8px; padding: 6px 16px;
             background: white; color: #374151; border-radius: 99px;
-            font-size: 0.75rem; font-weight: 600; transition: all 0.2s;
-            cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            font-size: 0.85rem; font-weight: 600; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
         .user-avatar { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; }
 
-        .loading-overlay {
-            position: absolute; inset: 0; background: rgba(255,255,255,0.7);
-            display: flex; align-items: center; justify-content: center; z-index: 50;
-        }
-
-        .data-mode-badge {
-            font-size: 10px; padding: 2px 8px; border-radius: 99px; font-weight: 900; text-transform: uppercase;
-        }
+        .data-mode-badge { font-size: 10px; padding: 2px 8px; border-radius: 99px; font-weight: 900; }
         .mode-public { background: #10b981; color: white; }
         .mode-private { background: #6366f1; color: white; }
     </style>
@@ -76,17 +68,16 @@
 
     <div id="toast" class="toast">訊息內容</div>
 
-    <!-- 登入彈窗 (保持不變) -->
     <div id="authModal" class="auth-modal">
         <div class="bg-white w-full max-w-md rounded-[2.5rem] p-8 shadow-2xl relative">
-            <button onclick="closeAuthModal()" class="absolute top-6 right-6 text-slate-300 hover:text-slate-900 transition-colors">
+            <button onclick="closeAuthModal()" class="absolute top-6 right-6 text-slate-300 hover:text-slate-900">
                 <i class="fa-solid fa-xmark text-xl"></i>
             </button>
             <div class="text-center mb-8">
-                <h2 class="text-3xl font-black text-slate-900 mb-2">同步回憶</h2>
-                <p class="text-slate-500 text-sm">登入以管理您的私人足跡</p>
+                <h2 class="text-3xl font-black text-slate-900 mb-2">登入系統</h2>
+                <p class="text-slate-500 text-sm">登入以管理您的私人足跡並發布至公開區域</p>
             </div>
-            <button onclick="loginWithGoogle()" class="w-full flex items-center justify-center gap-3 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-slate-700 hover:bg-slate-100 transition-all">
+            <button onclick="loginWithGoogle()" class="w-full flex items-center justify-center gap-3 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-slate-700 hover:bg-slate-100">
                 <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20">
                 使用 Google 帳號登入
             </button>
@@ -97,30 +88,31 @@
     <aside class="w-full md:w-80 bg-white border-b md:border-b-0 md:border-r border-slate-200 flex flex-col h-[35vh] md:h-full z-10 shrink-0">
         <div class="p-4 bg-slate-900 text-white flex flex-col gap-4 shrink-0">
             <div class="flex justify-between items-center">
-                <div id="authStatusContainer" class="flex items-center gap-2"></div>
-                <button id="addBtn" onclick="addNewLocation()" class="hidden p-2 bg-indigo-600 hover:bg-indigo-500 rounded-xl transition-all shadow-lg">
-                    <i class="fa-solid fa-plus text-xs"></i>
+                <div id="authStatusContainer"></div>
+                <button id="addBtn" onclick="addNewLocation()" class="hidden p-2 bg-indigo-600 hover:bg-indigo-500 rounded-xl transition-all">
+                    <i class="fa-solid fa-plus"></i>
                 </button>
             </div>
             <div class="flex items-center justify-between">
-                <h1 id="sidebarTitle" class="font-bold text-lg tracking-tight">足跡展示</h1>
-                <span id="modeBadge" class="data-mode-badge mode-public">公開</span>
+                <h1 class="font-bold text-lg">足跡故事</h1>
+                <span id="modeBadge" class="data-mode-badge mode-public">正在查看公開內容</span>
             </div>
         </div>
         
+        <!-- 僅在登入後顯示切換器 -->
         <div id="viewToggle" class="hidden p-3 bg-slate-50 border-b border-slate-200 flex gap-2">
             <button onclick="switchViewMode('public')" id="btnPublicView" class="flex-1 py-2 rounded-lg text-[10px] font-black uppercase transition-all">公開區域</button>
             <button onclick="switchViewMode('private')" id="btnPrivateView" class="flex-1 py-2 rounded-lg text-[10px] font-black uppercase transition-all">私人空間</button>
         </div>
 
         <div id="locationList" class="flex-1 overflow-y-auto custom-scrollbar p-3 relative">
-            <div id="listLoading" class="loading-overlay hidden">
-                <i class="fa-solid fa-circle-notch fa-spin text-indigo-500"></i>
+            <div id="loadingIndicator" class="flex items-center justify-center h-full text-slate-300">
+                <i class="fa-solid fa-circle-notch fa-spin text-2xl"></i>
             </div>
         </div>
     </aside>
 
-    <!-- 右側主內容區 -->
+    <!-- 右側內容區 -->
     <main class="flex-1 flex flex-col h-[65vh] md:h-full overflow-hidden bg-slate-50">
         <div class="h-1/3 shrink-0 relative border-b border-slate-200">
             <div id="map"></div>
@@ -129,7 +121,7 @@
         <div class="h-2/3 overflow-y-auto custom-scrollbar p-4 md:p-8">
             <div id="emptyState" class="flex flex-col items-center justify-center h-full text-slate-300">
                 <i class="fa-solid fa-map-location-dot text-6xl mb-4 opacity-20"></i>
-                <p id="emptyText" class="font-medium text-center">歡迎來到足跡平台</p>
+                <p>點選地點查看精彩故事</p>
             </div>
 
             <div id="contentView" class="hidden max-w-5xl mx-auto space-y-8">
@@ -138,14 +130,15 @@
                     <div class="flex flex-col md:flex-row md:items-end justify-between gap-6">
                         <div class="space-y-1">
                             <div class="flex items-center gap-2">
-                                <p id="displayDate" class="text-indigo-500 font-black text-xs uppercase tracking-widest"></p>
+                                <p id="displayDate" class="text-indigo-500 font-black text-xs tracking-widest"></p>
                                 <span id="contentPrivacyBadge" class="data-mode-badge"></span>
                             </div>
                             <h2 id="displayTitle" class="text-4xl md:text-5xl font-black text-slate-900 tracking-tight"></h2>
+                            <p id="authorDisplay" class="text-xs text-slate-400 font-medium"></p>
                         </div>
                         <div id="adminControls" class="hidden flex gap-2">
-                            <button onclick="toggleEditMode()" class="px-6 py-3 bg-white border border-slate-200 rounded-2xl shadow-sm font-bold text-slate-700 hover:bg-slate-50 transition-all flex items-center gap-2">
-                                <i class="fa-solid fa-pen-nib text-xs"></i> 編輯內容
+                            <button onclick="toggleEditMode()" class="px-6 py-3 bg-white border border-slate-200 rounded-2xl shadow-sm font-bold text-slate-700 hover:bg-slate-50 transition-all flex items-center">
+                                <i class="fa-solid fa-pen-nib text-xs mr-2"></i> 編輯
                             </button>
                             <button onclick="deleteLocation()" class="p-3 text-rose-500 hover:bg-rose-50 rounded-2xl transition-all">
                                 <i class="fa-solid fa-trash-can"></i>
@@ -161,43 +154,39 @@
 
                 <!-- 編輯區 -->
                 <div id="editForm" class="hidden bg-white rounded-[2.5rem] shadow-xl p-6 md:p-10 space-y-8 border border-slate-100">
-                    <div class="flex flex-col md:flex-row gap-6">
-                        <div class="flex-1 space-y-8">
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div class="space-y-2">
-                                    <label class="block text-xs font-black text-slate-400 uppercase ml-2">日期</label>
-                                    <input type="date" id="editDateInput" class="w-full p-4 bg-slate-50 border-none rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500">
-                                </div>
-                                <div class="space-y-2">
-                                    <label class="block text-xs font-black text-slate-400 uppercase ml-2">地點名稱</label>
-                                    <input type="text" id="editTitleInput" class="w-full p-4 bg-slate-50 border-none rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500">
-                                </div>
-                            </div>
-
-                            <div class="space-y-2">
-                                <label class="block text-xs font-black text-slate-400 uppercase ml-2">隱私與分享</label>
-                                <div class="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl">
-                                    <div class="flex-1">
-                                        <p class="text-sm font-bold text-slate-700">公開此足跡</p>
-                                        <p class="text-[10px] text-slate-400">開啟後，所有人都能在「公開區域」看到此內容</p>
-                                    </div>
-                                    <label class="relative inline-flex items-center cursor-pointer">
-                                        <input type="checkbox" id="editPublicToggle" class="sr-only peer">
-                                        <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
-                                    </label>
-                                </div>
-                            </div>
-
-                            <div id="mediaInputsContainer" class="space-y-3"></div>
-                            <button onclick="addMediaInput('image')" class="w-full py-3 border-2 border-dashed border-slate-200 rounded-2xl text-slate-400 font-bold text-sm hover:border-indigo-300 hover:text-indigo-500 transition-all">+ 新增媒體連結</button>
-
-                            <textarea id="editDescInput" rows="6" class="w-full p-6 bg-slate-50 border-none rounded-[2rem] outline-none focus:ring-2 focus:ring-indigo-500" placeholder="寫下當時的回憶..."></textarea>
-                            
-                            <div class="flex gap-4">
-                                <button onclick="saveChanges()" class="flex-[2] bg-indigo-600 text-white font-black py-5 rounded-2xl shadow-lg hover:bg-indigo-700">儲存變更</button>
-                                <button onclick="toggleEditMode()" class="flex-1 py-5 bg-slate-100 text-slate-500 font-bold rounded-2xl">放棄</button>
-                            </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="space-y-2">
+                            <label class="block text-xs font-black text-slate-400 ml-2">日期</label>
+                            <input type="date" id="editDateInput" class="w-full p-4 bg-slate-50 border-none rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500">
                         </div>
+                        <div class="space-y-2">
+                            <label class="block text-xs font-black text-slate-400 ml-2">地點名稱</label>
+                            <input type="text" id="editTitleInput" class="w-full p-4 bg-slate-50 border-none rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500">
+                        </div>
+                    </div>
+
+                    <div class="space-y-2">
+                        <label class="block text-xs font-black text-slate-400 ml-2">隱私權限</label>
+                        <div class="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl">
+                            <div class="flex-1">
+                                <p class="text-sm font-bold text-slate-700">公開展示於平台</p>
+                                <p class="text-[10px] text-slate-400">開啟後，所有使用者皆可瀏覽您的足跡與故事</p>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="editPublicToggle" class="sr-only peer">
+                                <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div id="mediaInputsContainer" class="space-y-3"></div>
+                    <button onclick="addMediaInput('image')" class="w-full py-3 border-2 border-dashed border-slate-200 rounded-2xl text-slate-400 font-bold hover:text-indigo-500 hover:border-indigo-200 transition-all">+ 新增照片或影片連結</button>
+
+                    <textarea id="editDescInput" rows="6" class="w-full p-6 bg-slate-50 border-none rounded-[2rem] outline-none focus:ring-2 focus:ring-indigo-500" placeholder="在那裡發生了什麼有趣的事？"></textarea>
+                    
+                    <div class="flex gap-4">
+                        <button onclick="saveChanges()" class="flex-[2] bg-indigo-600 text-white font-black py-5 rounded-2xl shadow-lg hover:bg-indigo-700">儲存並同步</button>
+                        <button onclick="toggleEditMode()" class="flex-1 py-5 bg-slate-100 text-slate-500 font-bold rounded-2xl">取消</button>
                     </div>
                 </div>
             </div>
@@ -242,7 +231,15 @@
             });
         }
 
-        // 轉換網址（處理 Google Drive）
+        // 縮圖處理：找尋 media 中第一個圖片
+        function getThumbnail(loc) {
+            if (loc.media && loc.media.length > 0) {
+                const firstImg = loc.media.find(m => m.type === 'image');
+                if (firstImg) return convertUrl(firstImg.url);
+            }
+            return null;
+        }
+
         function convertUrl(url) {
             if (!url) return '';
             if (url.includes("drive.google.com")) {
@@ -255,58 +252,77 @@
         window.switchViewMode = (mode) => {
             viewMode = mode;
             const isPub = mode === 'public';
-            document.getElementById('btnPublicView').className = isPub ? 'flex-1 py-2 rounded-lg text-[10px] font-black uppercase bg-slate-900 text-white shadow-md' : 'flex-1 py-2 rounded-lg text-[10px] font-black uppercase bg-white text-slate-400 border border-slate-100';
-            document.getElementById('btnPrivateView').className = !isPub ? 'flex-1 py-2 rounded-lg text-[10px] font-black uppercase bg-indigo-600 text-white shadow-md' : 'flex-1 py-2 rounded-lg text-[10px] font-black uppercase bg-white text-slate-400 border border-slate-100';
-            document.getElementById('modeBadge').innerText = isPub ? '公開展示' : '我的私人';
+            
+            // 更新 UI 狀態
+            if (auth.currentUser) {
+                document.getElementById('btnPublicView').className = isPub ? 'flex-1 py-2 rounded-lg text-[10px] font-black uppercase bg-slate-900 text-white shadow-md' : 'flex-1 py-2 rounded-lg text-[10px] font-black uppercase bg-white text-slate-400 border border-slate-100';
+                document.getElementById('btnPrivateView').className = !isPub ? 'flex-1 py-2 rounded-lg text-[10px] font-black uppercase bg-indigo-600 text-white shadow-md' : 'flex-1 py-2 rounded-lg text-[10px] font-black uppercase bg-white text-slate-400 border border-slate-100';
+            }
+            
+            document.getElementById('modeBadge').innerText = isPub ? '正在瀏覽公開內容' : '正在管理私人空間';
             document.getElementById('modeBadge').className = `data-mode-badge ${isPub ? 'mode-public' : 'mode-private'}`;
-            document.getElementById('addBtn').style.display = isPub ? 'none' : 'block';
+            
+            const addBtn = document.getElementById('addBtn');
+            if (addBtn) addBtn.style.display = (!isPub && auth.currentUser) ? 'block' : 'none';
+            
             loadData();
         };
 
         async function loadData() {
             if (unsubscribe) unsubscribe();
-            document.getElementById('listLoading').classList.remove('hidden');
-            let ref = viewMode === 'public' 
-                ? collection(db, 'artifacts', appId, 'public', 'data', 'locations')
-                : collection(db, 'artifacts', appId, 'users', auth.currentUser.uid, 'locations');
+            document.getElementById('locationList').innerHTML = '<div class="flex items-center justify-center h-full text-slate-300"><i class="fa-solid fa-circle-notch fa-spin text-2xl"></i></div>';
+            
+            let ref;
+            if (viewMode === 'public') {
+                ref = collection(db, 'artifacts', appId, 'public', 'data', 'locations');
+            } else if (auth.currentUser) {
+                ref = collection(db, 'artifacts', appId, 'users', auth.currentUser.uid, 'locations');
+            } else {
+                return; // 未登入且非公開模式，不處理
+            }
 
             unsubscribe = onSnapshot(ref, (snap) => {
                 locations = snap.docs.map(d => ({ id: d.id, ...d.data() }));
                 locations.sort((a, b) => (b.date || "").localeCompare(a.date || ""));
                 renderList(); 
                 updateMarkers();
-                document.getElementById('listLoading').classList.add('hidden');
+                if (currentId) selectLoc(currentId, false);
+            }, (error) => {
+                console.error("載入失敗:", error);
+                document.getElementById('locationList').innerHTML = '<div class="p-4 text-xs text-rose-400 text-center">暫時無法載入內容</div>';
             });
         }
 
         onAuthStateChanged(auth, (user) => {
             const container = document.getElementById('authStatusContainer');
             const toggle = document.getElementById('viewToggle');
+            
             if (user) {
-                const name = user.displayName || user.email.split('@')[0];
-                container.innerHTML = `<div onclick="handleLogout()" class="google-auth-btn"><img src="${user.photoURL || 'https://ui-avatars.com/api/?name='+name}" class="user-avatar"><span>登出</span></div>`;
+                container.innerHTML = `<div onclick="handleLogout()" class="google-auth-btn"><img src="${user.photoURL || 'https://ui-avatars.com/api/?name=User'}" class="user-avatar"><span>登出</span></div>`;
                 toggle.classList.remove('hidden');
-                switchViewMode('private');
+                switchViewMode('private'); // 登入後預設進私人管理
             } else {
-                container.innerHTML = `<div onclick="openAuthModal()" class="google-auth-btn"><i class="fa-solid fa-user-circle text-slate-400"></i><span>立即登入</span></div>`;
+                container.innerHTML = `<div onclick="openAuthModal()" class="google-auth-btn"><i class="fa-solid fa-user-circle text-slate-400"></i><span>登入管理</span></div>`;
                 toggle.classList.add('hidden');
-                switchViewMode('public');
+                switchViewMode('public'); // 未登入預設進公開瀏覽
             }
         });
 
         window.renderList = () => {
             const list = document.getElementById('locationList');
             list.innerHTML = '';
+            if (locations.length === 0) {
+                list.innerHTML = '<div class="p-8 text-center text-slate-300 text-xs font-medium">尚無足跡資料</div>';
+                return;
+            }
             locations.forEach(loc => {
                 const item = document.createElement('div');
-                item.className = `p-2.5 mb-1 cursor-pointer rounded-xl flex items-center gap-3 transition-all ${currentId === loc.id ? 'nav-item-active shadow-md' : 'hover:bg-slate-50 text-slate-600'}`;
+                item.className = `p-2 mb-1 cursor-pointer rounded-xl flex items-center gap-3 transition-all ${currentId === loc.id ? 'nav-item-active shadow-md' : 'hover:bg-slate-50 text-slate-600'}`;
                 
-                // 找回縮圖顯示
-                let thumbHtml = `<div class="list-icon-placeholder"><i class="fa-solid fa-location-dot"></i></div>`;
-                if (loc.media && loc.media.length > 0) {
-                    const firstImg = loc.media.find(m => m.type === 'image');
-                    if (firstImg) thumbHtml = `<img src="${convertUrl(firstImg.url)}" class="list-thumb">`;
-                }
+                const thumb = getThumbnail(loc);
+                const thumbHtml = thumb 
+                    ? `<img src="${thumb}" class="list-thumb">` 
+                    : `<div class="list-icon-placeholder"><i class="fa-solid fa-map-pin"></i></div>`;
 
                 item.innerHTML = `${thumbHtml}<div class="truncate font-bold text-xs flex-1">${loc.title}</div>`;
                 item.onclick = () => selectLoc(loc.id);
@@ -323,20 +339,22 @@
             document.getElementById('contentView').classList.remove('hidden');
             document.getElementById('displaySection').classList.remove('hidden');
             document.getElementById('editForm').classList.add('hidden');
-            document.getElementById('adminControls').style.display = viewMode === 'private' ? 'flex' : 'none';
+            
+            // 管理權限：只有在私人模式且登入時才能編輯
+            document.getElementById('adminControls').style.display = (viewMode === 'private' && auth.currentUser) ? 'flex' : 'none';
 
             document.getElementById('displayTitle').innerText = loc.title;
-            document.getElementById('displayDate').innerText = loc.date || "未分類";
-            document.getElementById('displayDescription').innerText = loc.description || "";
+            document.getElementById('displayDate').innerText = loc.date || "未提供日期";
+            document.getElementById('displayDescription').innerText = loc.description || "這段旅程尚未留下文字紀錄...";
+            document.getElementById('authorDisplay').innerText = loc.author ? `由 ${loc.author} 分享` : "";
             
             const pBadge = document.getElementById('contentPrivacyBadge');
-            pBadge.innerText = loc.isPublic ? "公開" : "私人";
+            pBadge.innerText = loc.isPublic ? "公開展示" : "私人收藏";
             pBadge.className = `data-mode-badge ${loc.isPublic ? 'mode-public' : 'mode-private'}`;
 
             const gallery = document.getElementById('mediaGallery'); gallery.innerHTML = '';
             (loc.media || []).forEach(m => {
-                const div = document.createElement('div');
-                div.className = 'media-item';
+                const div = document.createElement('div'); div.className = 'media-item';
                 const url = convertUrl(m.url);
                 div.innerHTML = m.type === 'image' ? `<img src="${url}" class="media-img">` : `<video src="${url}" class="media-video" controls></video>`;
                 gallery.appendChild(div);
@@ -371,7 +389,7 @@
             div.className = 'flex items-center gap-2 bg-white p-2 rounded-xl border border-slate-100';
             div.innerHTML = `
                 <select class="bg-transparent text-[10px] font-bold outline-none"><option value="image" ${type==='image'?'selected':''}>圖</option><option value="video" ${type==='video'?'selected':''}>影</option></select>
-                <input type="text" class="flex-1 text-xs outline-none" placeholder="網址" value="${val}">
+                <input type="text" class="flex-1 text-xs outline-none" placeholder="連結網址" value="${val}">
                 <button onclick="this.parentElement.remove()" class="text-slate-300 hover:text-rose-500 px-2"><i class="fa-solid fa-xmark"></i></button>
             `;
             container.appendChild(div);
@@ -383,6 +401,7 @@
         };
 
         window.saveChanges = async () => {
+            if (!auth.currentUser) return;
             const media = Array.from(document.querySelectorAll('#mediaInputsContainer > div')).map(div => ({
                 type: div.querySelector('select').value,
                 url: div.querySelector('input').value
@@ -390,7 +409,7 @@
 
             const isPublic = document.getElementById('editPublicToggle').checked;
             const data = {
-                title: document.getElementById('editTitleInput').value || "未命名",
+                title: document.getElementById('editTitleInput').value || "無題地點",
                 date: document.getElementById('editDateInput').value,
                 description: document.getElementById('editDescInput').value,
                 media: media,
@@ -399,48 +418,68 @@
             };
             if (tempMarker) { const p = tempMarker.getLatLng(); data.lat = p.lat; data.lng = p.lng; }
 
-            // 1. 儲存到私人空間
-            const privateDoc = doc(db, 'artifacts', appId, 'users', auth.currentUser.uid, 'locations', currentId);
-            await setDoc(privateDoc, data, { merge: true });
+            try {
+                // 1. 私人空間存檔
+                const privateDoc = doc(db, 'artifacts', appId, 'users', auth.currentUser.uid, 'locations', currentId);
+                await setDoc(privateDoc, data, { merge: true });
 
-            // 2. 如果設為公開，同步到公共空間；如果取消公開，從公共空間移除
-            const publicDoc = doc(db, 'artifacts', appId, 'public', 'data', 'locations', currentId);
-            if (isPublic) {
-                await setDoc(publicDoc, { ...data, author: auth.currentUser.displayName || "匿名" }, { merge: true });
-            } else {
-                await deleteDoc(publicDoc).catch(() => {});
+                // 2. 公開區域同步
+                const publicDoc = doc(db, 'artifacts', appId, 'public', 'data', 'locations', currentId);
+                if (isPublic) {
+                    await setDoc(publicDoc, { ...data, author: auth.currentUser.displayName || "匿名旅人" }, { merge: true });
+                } else {
+                    await deleteDoc(publicDoc).catch(() => {});
+                }
+
+                showToast("資料已安全儲存");
+                toggleEditMode();
+                
+                // 手動更新本地緩存
+                const idx = locations.findIndex(l => l.id === currentId);
+                if (idx > -1) { locations[idx] = { ...locations[idx], ...data }; selectLoc(currentId, false); }
+            } catch (e) {
+                showToast("儲存失敗，請檢查網路連線");
             }
-
-            showToast("同步成功！");
-            toggleEditMode();
         };
 
         window.addNewLocation = async () => {
+            if (!auth.currentUser) return;
             const ref = collection(db, 'artifacts', appId, 'users', auth.currentUser.uid, 'locations');
-            const res = await addDoc(ref, { title: "新地點", date: new Date().toISOString().split('T')[0], lat: 23.6, lng: 121, media: [], isPublic: false });
+            const res = await addDoc(ref, { 
+                title: "新地點", 
+                date: new Date().toISOString().split('T')[0], 
+                lat: 23.6, lng: 121, 
+                media: [], 
+                isPublic: false 
+            });
             currentId = res.id;
             toggleEditMode();
         };
 
         window.deleteLocation = async () => {
-            if (!confirm("確定要刪除嗎？")) return;
+            if (!confirm("確定要刪除這筆回憶嗎？")) return;
             await deleteDoc(doc(db, 'artifacts', appId, 'users', auth.currentUser.uid, 'locations', currentId));
             await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'locations', currentId)).catch(()=>{});
-            location.reload();
+            currentId = null;
+            document.getElementById('contentView').classList.add('hidden');
+            document.getElementById('emptyState').classList.remove('hidden');
         };
 
         window.updateMarkers = () => {
             markersLayer.clearLayers();
             locations.forEach(loc => {
                 if (loc.lat) {
-                    const icon = L.divIcon({ html: `<i class="fa-solid fa-location-dot ${currentId===loc.id?'text-indigo-600 scale-125':'text-rose-500'} text-2xl"></i>`, className: '', iconAnchor: [12, 24] });
+                    const icon = L.divIcon({ 
+                        html: `<i class="fa-solid fa-location-dot ${currentId===loc.id?'text-indigo-600 scale-150':'text-rose-500'} text-xl transition-all"></i>`, 
+                        className: '', iconAnchor: [10, 20] 
+                    });
                     L.marker([loc.lat, loc.lng], { icon }).addTo(markersLayer).on('click', () => selectLoc(loc.id));
                 }
             });
         };
 
         window.handleLogout = () => signOut(auth).then(() => location.reload());
-        window.loginWithGoogle = () => signInWithPopup(auth, googleProvider);
+        window.loginWithGoogle = () => signInWithPopup(auth, googleProvider).then(() => closeAuthModal());
         window.openAuthModal = () => document.getElementById('authModal').style.display = 'flex';
         window.closeAuthModal = () => document.getElementById('authModal').style.display = 'none';
         function showToast(m) { const t = document.getElementById('toast'); t.innerText = m; t.style.display = 'block'; setTimeout(() => t.style.display = 'none', 3000); }
