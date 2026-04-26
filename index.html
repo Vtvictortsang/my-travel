@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>足跡管理者中心 - 世界地圖版</title>
+    <title>足跡管理者中心 - 座標編輯功能</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -14,66 +14,56 @@
         body { font-family: 'Noto Sans TC', sans-serif; background-color: #f8fafc; margin: 0; padding: 0; height: 100vh; overflow: hidden; }
         #app-container { display: flex; flex-direction: row; height: 100vh; width: 100%; }
         
-        /* 側邊欄樣式 */
+        /* 側邊欄 */
         .sidebar-admin { width: 380px; height: 100%; display: flex; flex-direction: column; border-right: 1px solid #e2e8f0; background: #fff; z-index: 60; flex-shrink: 0; }
         .layer-1 { height: 70px; background: #1e293b; display: flex; align-items: center; padding: 0 1.25rem; z-index: 50; flex-shrink: 0; }
         .layer-2 { height: 320px; position: relative; background: #e2e8f0; flex-shrink: 0; border-bottom: 4px solid #f1f5f9; }
         .layer-3 { flex: 1; background: #ffffff; display: flex; flex-direction: column; overflow: hidden; }
         
-        /* 主要內容區 */
+        /* 地圖高度與容器 */
+        #main-map { height: 100%; width: 100%; }
+        #edit-picker-map { height: 250px; width: 100%; border-radius: 20px; margin-top: 10px; border: 2px solid #f1f5f9; }
+
         .main-content-view { flex: 1; height: 100%; overflow-y: auto; background: #fcfcfd; position: relative; scroll-behavior: smooth; }
 
         @media (max-width: 768px) {
             body { overflow-y: auto; height: auto; }
             #app-container { flex-direction: column; height: auto; }
-            .sidebar-admin { width: 100%; height: auto; min-height: 100vh; border-right: none; }
+            .sidebar-admin { width: 100%; height: auto; min-height: 100vh; }
             .layer-2 { height: 350px !important; }
-            .main-content-view { width: 100%; height: auto; min-height: 100vh; background: white; }
         }
 
         #locationScroller { flex-direction: column; overflow-y: auto; padding: 1rem; gap: 8px; display: flex; }
-        
-        .date-divider { padding: 20px 8px 10px 8px; font-size: 11px; font-weight: 900; color: #94a3b8; letter-spacing: 0.1em; text-transform: uppercase; display: flex; align-items: center; gap: 10px; }
+        .date-divider { padding: 20px 8px 10px 8px; font-size: 11px; font-weight: 900; color: #94a3b8; display: flex; align-items: center; gap: 10px; }
         .date-divider::after { content: ""; flex: 1; height: 1px; background: #f1f5f9; }
 
-        .loc-item { width: 100%; display: flex; flex-direction: row; align-items: center; padding: 12px; background: #fff; border-radius: 12px; border: 1px solid #f1f5f9; cursor: pointer; transition: all 0.2s ease; }
+        .loc-item { width: 100%; display: flex; align-items: center; padding: 12px; background: #fff; border-radius: 12px; border: 1px solid #f1f5f9; cursor: pointer; transition: 0.2s; }
         .loc-thumb { width: 48px; height: 48px; border-radius: 8px; object-fit: cover; background: #f1f5f9; }
-        .loc-item p { font-size: 15px; margin: 0 0 0 12px; font-weight: 700; color: #334155; }
+        .loc-item p { font-size: 15px; margin-left: 12px; font-weight: 700; color: #334155; }
         .loc-active { background-color: #f0f3ff !important; border-color: #6366f1 !important; }
 
-        #map { height: 100%; width: 100%; z-index: 10; }
-        
-        .media-scroller { display: flex; gap: 12px; overflow-x: auto; padding: 10px 0 20px 0; }
-        .media-card { flex: 0 0 85%; max-width: 450px; aspect-ratio: 16/10; border-radius: 20px; overflow: hidden; background: #f1f5f9; position: relative; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
-        .media-card img { width: 100%; height: 100%; object-fit: cover; }
+        /* 上傳網格 */
+        .upload-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 10px; }
+        .upload-preview { position: relative; aspect-ratio: 1/1; border-radius: 12px; overflow: hidden; }
+        .upload-preview img { width: 100%; height: 100%; object-fit: cover; }
+        .remove-img-btn { position: absolute; top: 4px; right: 4px; width: 20px; height: 20px; background: #ef4444; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; cursor: pointer; }
+        .upload-placeholder { aspect-ratio: 1/1; border: 2px dashed #cbd5e1; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #94a3b8; cursor: pointer; }
 
-        .privacy-badge { font-size: 10px; padding: 4px 12px; border-radius: 20px; font-weight: 800; text-transform: uppercase; }
-        .badge-public { background: #ecfdf5; color: #10b981; }
-        .badge-private { background: #eef2ff; color: #6366f1; }
-
-        .nav-active { background-color: #6366f1 !important; color: white !important; }
-        
-        /* 載入與提示 */
-        .toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); padding: 12px 24px; background: #1e293b; color: white; border-radius: 12px; z-index: 10001; display: none; font-size: 14px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3); }
+        .toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); padding: 12px 24px; background: #1e293b; color: white; border-radius: 12px; z-index: 10001; display: none; }
         .loading-overlay { position: fixed; inset: 0; background: rgba(255,255,255,0.9); z-index: 10000; display: none; flex-direction: column; align-items: center; justify-content: center; }
         .spinner { border: 4px solid #f3f3f3; border-top: 4px solid #6366f1; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
-        /* 上傳網格 */
-        .upload-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 12px; margin-top: 10px; }
-        .upload-preview { position: relative; aspect-ratio: 1/1; border-radius: 14px; overflow: hidden; border: 1px solid #e2e8f0; }
-        .upload-preview img { width: 100%; height: 100%; object-fit: cover; }
-        .remove-img-btn { position: absolute; top: 6px; right: 6px; width: 24px; height: 24px; background: rgba(239, 68, 68, 0.95); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; cursor: pointer; }
-        .upload-placeholder { aspect-ratio: 1/1; border: 2px dashed #cbd5e1; border-radius: 14px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #94a3b8; cursor: pointer; transition: 0.2s; }
-        .upload-placeholder:hover { background: #f8fafc; border-color: #6366f1; color: #6366f1; }
-
-        /* 切換按鈕 */
-        .toggle-btn { position: relative; display: inline-block; width: 50px; height: 26px; }
+        
+        .toggle-btn { position: relative; display: inline-block; width: 44px; height: 22px; }
         .toggle-btn input { opacity: 0; width: 0; height: 0; }
         .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #cbd5e1; transition: .4s; border-radius: 34px; }
-        .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
+        .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
         input:checked + .slider { background-color: #10b981; }
-        input:checked + .slider:before { transform: translateX(24px); }
+        input:checked + .slider:before { transform: translateX(22px); }
+
+        .media-scroller { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 10px; }
+        .media-card { flex: 0 0 300px; height: 200px; border-radius: 16px; overflow: hidden; background: #eee; }
+        .media-card img { width: 100%; height: 100%; object-fit: cover; }
     </style>
 </head>
 <body>
@@ -90,94 +80,90 @@
         <div class="sidebar-admin">
             <header class="layer-1">
                 <div id="userProfile" onclick="handleAuthClick()" class="flex items-center gap-3 cursor-pointer">
-                    <div id="userAvatar" class="w-10 h-10 rounded-xl bg-slate-700 flex items-center justify-center text-white overflow-hidden border border-slate-600">
+                    <div id="userAvatar" class="w-10 h-10 rounded-xl bg-slate-700 flex items-center justify-center text-white overflow-hidden">
                         <i class="fa-solid fa-user"></i>
                     </div>
                     <div class="flex flex-col">
-                        <h1 id="userName" class="text-white font-black text-sm tracking-wide">訪客</h1>
+                        <h1 id="userName" class="text-white font-black text-sm">訪客</h1>
                         <span id="authStatusLabel" class="text-[9px] text-slate-400 font-bold uppercase">點擊登入</span>
                     </div>
                 </div>
             </header>
 
             <section class="layer-2">
-                <div id="map"></div>
+                <div id="main-map"></div>
             </section>
 
             <section class="layer-3">
-                <div class="p-4 border-b border-slate-50">
-                    <div class="flex gap-2 bg-slate-100 p-1 rounded-2xl">
-                        <button onclick="switchViewMode('public')" id="btnPublic" class="flex-1 py-2 rounded-xl text-[11px] font-black nav-active">公開展區</button>
-                        <button onclick="switchViewMode('private')" id="btnPrivate" class="hidden flex-1 py-2 rounded-xl text-[11px] font-black text-slate-500">我的後台</button>
+                <div class="p-4 border-b">
+                    <div class="flex gap-2 bg-slate-100 p-1 rounded-xl">
+                        <button onclick="switchViewMode('public')" id="btnPublic" class="flex-1 py-2 rounded-lg text-[11px] font-black nav-active">公開展區</button>
+                        <button onclick="switchViewMode('private')" id="btnPrivate" class="hidden flex-1 py-2 rounded-lg text-[11px] font-black text-slate-500">我的後台</button>
                     </div>
                 </div>
-                <div id="locationScroller" class="flex-1 custom-scrollbar"></div>
+                <div id="locationScroller"></div>
             </section>
         </div>
 
-        <!-- 主要內容顯示 -->
+        <!-- 主要顯示區 -->
         <div id="contentView" class="main-content-view">
+            <!-- 預設畫面 -->
             <div id="emptyContent" class="h-full flex flex-col items-center justify-center text-slate-300 p-10 text-center">
-                <div class="w-24 h-24 bg-slate-50 rounded-full flex items-center justify-center mb-6"><i class="fa-solid fa-map-location-dot text-4xl opacity-20"></i></div>
+                <i class="fa-solid fa-map-location-dot text-6xl opacity-10 mb-6"></i>
                 <h3 class="text-slate-900 font-black text-xl">點擊地點開始旅程</h3>
-                <p class="text-slate-400 text-sm mt-2 max-w-xs">選擇左側地點清單或地圖上的標記，查看當時的故事與風景。</p>
             </div>
 
-            <div id="mainContent" class="hidden">
-                <div class="p-8 md:p-20 space-y-12 max-w-5xl mx-auto">
-                    <div class="flex justify-between items-start border-b border-slate-100 pb-10">
-                        <div class="space-y-4">
-                            <div class="flex items-center gap-3">
-                                <span id="cDate" class="text-indigo-600 font-black text-[11px] tracking-widest bg-indigo-50 px-4 py-1.5 rounded-full uppercase"></span>
-                                <span id="cBadge" class="privacy-badge"></span>
-                            </div>
-                            <h2 id="cTitle" class="text-5xl md:text-7xl font-black text-slate-900 tracking-tighter leading-none"></h2>
-                        </div>
-                        <div id="adminTools" class="hidden">
-                            <button onclick="toggleEditMode()" class="w-14 h-14 bg-white shadow-xl border border-slate-100 text-indigo-600 rounded-2xl flex items-center justify-center hover:bg-indigo-50 transition-colors"><i class="fa-solid fa-pen-to-square text-xl"></i></button>
-                        </div>
+            <!-- 足跡詳情 -->
+            <div id="mainContent" class="hidden p-8 md:p-16 max-w-4xl mx-auto space-y-10">
+                <div class="flex justify-between items-start">
+                    <div class="space-y-2">
+                        <span id="cDate" class="text-indigo-600 font-black text-xs bg-indigo-50 px-3 py-1 rounded-full"></span>
+                        <h2 id="cTitle" class="text-5xl font-black text-slate-900 tracking-tighter"></h2>
                     </div>
-                    <div id="cMedia" class="media-scroller custom-scrollbar"></div>
-                    <div class="prose prose-slate max-w-none">
-                        <p id="cDesc" class="text-slate-600 text-xl leading-relaxed whitespace-pre-wrap font-medium"></p>
+                    <div id="adminTools" class="hidden">
+                        <button onclick="toggleEditMode()" class="w-12 h-12 bg-white shadow-lg rounded-xl flex items-center justify-center text-indigo-600"><i class="fa-solid fa-pen"></i></button>
                     </div>
                 </div>
+                <div id="cMedia" class="media-scroller"></div>
+                <p id="cDesc" class="text-slate-600 text-lg leading-relaxed whitespace-pre-wrap"></p>
             </div>
 
             <!-- 編輯介面 -->
             <div id="editMode" class="hidden p-6 md:p-12 bg-slate-50 min-h-full">
-                <div class="max-w-3xl mx-auto space-y-8 bg-white p-8 md:p-14 rounded-[3rem] shadow-2xl">
-                    <div class="flex items-center gap-4 border-b border-slate-50 pb-8">
-                        <div class="w-14 h-14 bg-indigo-600 text-white rounded-2xl flex items-center justify-center text-2xl shadow-lg shadow-indigo-200"><i class="fa-solid fa-pencil"></i></div>
-                        <h3 class="text-3xl font-black text-slate-900">更新足跡內容</h3>
-                    </div>
+                <div class="max-w-2xl mx-auto bg-white p-8 rounded-[2rem] shadow-xl space-y-6">
+                    <h3 class="text-2xl font-black text-slate-900">編輯定位與內容</h3>
                     
-                    <div class="flex items-center justify-between p-6 bg-slate-50 rounded-3xl border border-slate-100">
-                        <div class="flex flex-col">
-                            <span class="text-slate-900 font-black text-base">公開展示</span>
-                            <span id="privacyDesc" class="text-slate-400 text-xs font-bold">目前為：私人專屬</span>
+                    <!-- 地圖定位器 -->
+                    <div class="space-y-2">
+                        <label class="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">1. 地圖定位 (點擊地圖選擇位置)</label>
+                        <div id="edit-picker-map"></div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div><label class="text-[10px] text-slate-400 block mb-1">緯度 (Latitude)</label><input type="number" id="eLat" step="any" class="w-full p-3 bg-slate-50 border rounded-xl text-sm font-mono"></div>
+                            <div><label class="text-[10px] text-slate-400 block mb-1">經度 (Longitude)</label><input type="number" id="eLng" step="any" class="w-full p-3 bg-slate-50 border rounded-xl text-sm font-mono"></div>
                         </div>
-                        <label class="toggle-btn"><input type="checkbox" id="eIsPublic" onchange="updatePrivacyLabel()"><span class="slider"></span></label>
                     </div>
 
-                    <div class="space-y-6">
+                    <div class="flex items-center justify-between p-4 bg-slate-50 rounded-2xl">
+                        <span class="font-bold text-sm">公開展示</span>
+                        <label class="toggle-btn"><input type="checkbox" id="eIsPublic"><span class="slider"></span></label>
+                    </div>
+
+                    <div class="space-y-4">
                         <div>
-                            <label class="text-[11px] font-black text-slate-400 ml-2 mb-3 block uppercase tracking-widest">媒體管理 (自動優化高解析)</label>
+                            <label class="text-[11px] font-black text-slate-400 block mb-2 uppercase">媒體圖片</label>
                             <div class="upload-grid" id="editMediaGrid">
-                                <div class="upload-placeholder" onclick="triggerFileInput()"><i class="fa-solid fa-plus text-xl mb-1"></i><span class="text-[10px] font-black">新增</span></div>
+                                <div class="upload-placeholder" onclick="document.getElementById('mediaInput').click()"><i class="fa-solid fa-plus text-lg"></i></div>
                             </div>
                             <input type="file" id="mediaInput" class="hidden" accept="image/*" multiple onchange="handleFileSelection(event)">
                         </div>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div><label class="text-[11px] font-black text-slate-400 ml-2 mb-2 block uppercase">標題</label><input type="text" id="eTitle" class="w-full p-5 rounded-2xl border border-slate-100 bg-slate-50 outline-none font-bold focus:border-indigo-300"></div>
-                            <div><label class="text-[11px] font-black text-slate-400 ml-2 mb-2 block uppercase">日期</label><input type="date" id="eDate" class="w-full p-5 rounded-2xl border border-slate-100 bg-slate-50 outline-none font-bold focus:border-indigo-300"></div>
-                        </div>
-                        <div><label class="text-[11px] font-black text-slate-400 ml-2 mb-2 block uppercase">內容敘述</label><textarea id="eDesc" rows="8" class="w-full p-6 rounded-3xl border border-slate-100 bg-slate-50 outline-none font-medium focus:border-indigo-300"></textarea></div>
+                        <input type="text" id="eTitle" placeholder="足跡名稱" class="w-full p-4 bg-slate-50 border rounded-xl font-bold">
+                        <input type="date" id="eDate" class="w-full p-4 bg-slate-50 border rounded-xl font-bold">
+                        <textarea id="eDesc" rows="5" placeholder="說說當時的故事..." class="w-full p-4 bg-slate-50 border rounded-xl"></textarea>
                     </div>
 
-                    <div class="flex gap-4 pt-6">
-                        <button onclick="saveChanges()" class="flex-[3] py-6 bg-indigo-600 text-white font-black rounded-3xl shadow-xl hover:bg-indigo-700 active:scale-[0.98] transition-all">儲存更改</button>
-                        <button onclick="toggleEditMode()" class="flex-1 py-6 bg-slate-100 text-slate-500 font-bold rounded-3xl hover:bg-slate-200 transition-all">返回</button>
+                    <div class="flex gap-3 pt-4">
+                        <button onclick="saveChanges()" class="flex-1 py-4 bg-indigo-600 text-white font-black rounded-2xl shadow-lg">儲存更新</button>
+                        <button onclick="toggleEditMode()" class="px-8 py-4 bg-slate-100 text-slate-500 font-bold rounded-2xl">取消</button>
                     </div>
                 </div>
             </div>
@@ -189,7 +175,6 @@
         import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, doc, setDoc, onSnapshot, serverTimestamp, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // Firebase 配置
         const firebaseConfig = { apiKey: "AIzaSyBFBhaRtjzBcav9dI7TfNt0E2ZjjUW1b28", authDomain: "mytraveljournal-74571.firebaseapp.com", projectId: "mytraveljournal-74571", appId: "1:1056167338813:web:8dd15d6d1dae9e8efb5b54" };
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
@@ -199,12 +184,11 @@
 
         let locations = [];
         let currentId = null;
-        let map, markersLayer;
+        let mainMap, editMap, mainMarkersLayer, editMarker;
         let viewMode = 'public';
         let unsub = null;
         let currentEditingMedia = [];
 
-        // 圖片壓縮優化技術 (1600px, 0.8 品質)
         async function compressImage(file) {
             return new Promise((resolve) => {
                 const reader = new FileReader();
@@ -215,107 +199,86 @@
                     img.onload = () => {
                         const canvas = document.createElement('canvas');
                         let w = img.width, h = img.height;
-                        const MAX = 1600; // 高解析度極限
+                        const MAX = 1600;
                         if (w > h) { if (w > MAX) { h *= MAX / w; w = MAX; } }
                         else { if (h > MAX) { w *= MAX / h; h = MAX; } }
                         canvas.width = w; canvas.height = h;
-                        const ctx = canvas.getContext('2d');
-                        ctx.imageSmoothingEnabled = true;
-                        ctx.imageSmoothingQuality = 'high';
-                        ctx.drawImage(img, 0, 0, w, h);
-                        resolve(canvas.toDataURL('image/jpeg', 0.8)); // 體積與畫質的平衡
+                        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                        resolve(canvas.toDataURL('image/jpeg', 0.8));
                     };
                 };
             });
         }
 
-        // 初始化地圖
-        function initMap() {
-            // 中心點預設為世界視角
-            map = L.map('map', { center: [20, 0], zoom: 2, zoomControl: false });
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-                attribution: '&copy; OpenStreetMap'
-            }).addTo(map);
-            markersLayer = L.layerGroup().addTo(map);
+        function initMaps() {
+            // 主地圖
+            mainMap = L.map('main-map', { center: [20, 0], zoom: 2, zoomControl: false });
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png').addTo(mainMap);
+            mainMarkersLayer = L.layerGroup().addTo(mainMap);
+
+            // 編輯定位地圖
+            editMap = L.map('edit-picker-map', { center: [20, 0], zoom: 2 });
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png').addTo(editMap);
             
-            // 加入縮放控制到右下角
-            L.control.zoom({ position: 'bottomright' }).addTo(map);
+            editMap.on('click', (e) => {
+                setEditCoords(e.latlng.lat, e.latlng.lng);
+            });
+        }
+
+        function setEditCoords(lat, lng) {
+            document.getElementById('eLat').value = lat.toFixed(6);
+            document.getElementById('eLng').value = lng.toFixed(6);
+            if (editMarker) editMap.removeLayer(editMarker);
+            editMarker = L.marker([lat, lng]).addTo(editMap);
         }
 
         window.handleAuthClick = () => {
-            if (auth.currentUser) { if(confirm("確定登出嗎？")) signOut(auth); }
-            else { signInWithPopup(auth, provider).catch(e => console.error(e)); }
+            if (auth.currentUser) { if(confirm("確定登出？")) signOut(auth); }
+            else { signInWithPopup(auth, provider); }
         };
 
         onAuthStateChanged(auth, (user) => {
-            const avatar = document.getElementById('userAvatar');
-            const name = document.getElementById('userName');
-            const label = document.getElementById('authStatusLabel');
             const btnPrivate = document.getElementById('btnPrivate');
-            
             if (user) {
-                avatar.innerHTML = `<img src="${user.photoURL}" class="w-full h-full object-cover">`;
-                name.innerText = user.displayName; label.innerText = "管理員模式";
+                document.getElementById('userAvatar').innerHTML = `<img src="${user.photoURL}" class="w-full h-full object-cover">`;
+                document.getElementById('userName').innerText = user.displayName;
                 btnPrivate.style.display = 'block'; switchViewMode('private');
             } else {
-                avatar.innerHTML = `<i class="fa-solid fa-user"></i>`;
-                name.innerText = "訪客"; label.innerText = "點擊登入";
+                document.getElementById('userAvatar').innerHTML = `<i class="fa-solid fa-user"></i>`;
+                document.getElementById('userName').innerText = "訪客";
                 btnPrivate.style.display = 'none'; switchViewMode('public');
             }
         });
 
         window.switchViewMode = (mode) => {
             viewMode = mode;
-            currentId = null;
-            document.getElementById('mainContent').classList.add('hidden');
-            document.getElementById('emptyContent').classList.remove('hidden');
-            
-            const isPub = mode === 'public';
-            document.getElementById('btnPublic').className = isPub ? 'flex-1 py-2 rounded-xl text-[11px] font-black nav-active' : 'flex-1 py-2 rounded-xl text-[11px] font-black text-slate-500';
-            document.getElementById('btnPrivate').className = !isPub ? 'flex-1 py-2 rounded-xl text-[11px] font-black nav-active' : 'flex-1 py-2 rounded-xl text-[11px] font-black text-slate-500';
-            
+            document.getElementById('btnPublic').className = mode === 'public' ? 'flex-1 py-2 rounded-lg text-[11px] font-black bg-indigo-600 text-white' : 'flex-1 py-2 rounded-lg text-[11px] font-black text-slate-500';
+            document.getElementById('btnPrivate').className = mode === 'private' ? 'flex-1 py-2 rounded-lg text-[11px] font-black bg-indigo-600 text-white' : 'flex-1 py-2 rounded-lg text-[11px] font-black text-slate-500';
             loadData();
         };
 
         function loadData() {
             if (unsub) unsub();
-            let ref;
-            if (viewMode === 'public' || !auth.currentUser) {
-                ref = collection(db, 'artifacts', appId, 'public', 'data', 'locations');
-            } else {
-                ref = collection(db, 'artifacts', appId, 'users', auth.currentUser.uid, 'locations');
-            }
+            let ref = (viewMode === 'public' || !auth.currentUser) 
+                ? collection(db, 'artifacts', appId, 'public', 'data', 'locations')
+                : collection(db, 'artifacts', appId, 'users', auth.currentUser.uid, 'locations');
 
             unsub = onSnapshot(ref, (snap) => {
-                let raw = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-                locations = (viewMode === 'public') ? raw.filter(l => l.isPublic === true) : raw;
+                locations = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                if (viewMode === 'public') locations = locations.filter(l => l.isPublic);
                 locations.sort((a, b) => (b.date || "").localeCompare(a.date || ""));
                 renderList();
-                updateMarkers();
-            }, (err) => console.error("Firestore Listen Error:", err));
+                updateMainMarkers();
+            });
         }
 
         function renderList() {
             const container = document.getElementById('locationScroller');
             container.innerHTML = '';
-            let lastYM = "";
-            
             locations.forEach(loc => {
-                if (loc.date) {
-                    const ym = loc.date.substring(0, 7);
-                    if (ym !== lastYM) {
-                        const div = document.createElement('div');
-                        div.className = 'date-divider';
-                        const [y, m] = ym.split('-');
-                        div.innerHTML = `<span>${y}年 ${m}月</span>`;
-                        container.appendChild(div);
-                        lastYM = ym;
-                    }
-                }
                 const item = document.createElement('div');
                 item.className = `loc-item ${currentId === loc.id ? 'loc-active' : ''}`;
-                const thumb = (loc.media && loc.media[0]) ? loc.media[0].url : 'https://ui-avatars.com/api/?name=Spot&background=f1f5f9';
-                item.innerHTML = `<img src="${thumb}" class="loc-thumb" onerror="this.src='https://ui-avatars.com/api/?name=?'"><p class="truncate">${loc.title}</p>`;
+                item.innerHTML = `<img src="${(loc.media && loc.media[0]) ? loc.media[0].url : ''}" class="loc-thumb" onerror="this.src='https://ui-avatars.com/api/?name=Spot'"><p class="truncate">${loc.title}</p>`;
                 item.onclick = () => selectLoc(loc.id);
                 container.appendChild(item);
             });
@@ -325,52 +288,34 @@
             currentId = id;
             const loc = locations.find(l => l.id === id);
             if (!loc) return;
-            
             document.getElementById('emptyContent').classList.add('hidden');
             document.getElementById('mainContent').classList.remove('hidden');
             document.getElementById('editMode').classList.add('hidden');
             document.getElementById('adminTools').style.display = (auth.currentUser && viewMode === 'private') ? 'block' : 'none';
             
-            updateDetailUI(loc);
-            renderList();
-            updateMarkers();
-            
-            if (loc.lat && loc.lng) {
-                map.flyTo([loc.lat, loc.lng], 14, { duration: 1.5 });
-            }
-        }
-
-        function updateMarkers() {
-            markersLayer.clearLayers();
-            locations.forEach(loc => {
-                if (!loc.lat || !loc.lng) return;
-                const isActive = currentId === loc.id;
-                const icon = L.divIcon({
-                    html: `<div style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2))">
-                             <i class="fa-solid fa-location-dot ${isActive ? 'text-indigo-600 scale-150' : 'text-rose-500'} text-2xl transition-all duration-300"></i>
-                           </div>`,
-                    className: '',
-                    iconAnchor: [12, 24]
-                });
-                L.marker([loc.lat, loc.lng], { icon }).addTo(markersLayer).on('click', () => selectLoc(loc.id));
-            });
-        }
-
-        function updateDetailUI(loc) {
             document.getElementById('cTitle').innerText = loc.title;
-            document.getElementById('cDate').innerText = loc.date || "NO DATE";
-            document.getElementById('cDesc').innerText = loc.description || "";
-            const badge = document.getElementById('cBadge');
-            badge.innerText = loc.isPublic ? "公開展示" : "私人存檔";
-            badge.className = `privacy-badge ${loc.isPublic ? 'badge-public' : 'badge-private'}`;
-            
+            document.getElementById('cDate').innerText = loc.date;
+            document.getElementById('cDesc').innerText = loc.description;
             const media = document.getElementById('cMedia');
             media.innerHTML = '';
             (loc.media || []).forEach(m => {
-                const div = document.createElement('div');
-                div.className = 'media-card';
-                div.innerHTML = `<img src="${m.url}" loading="lazy" onerror="this.style.display='none'">`;
-                media.appendChild(div);
+                media.innerHTML += `<div class="media-card"><img src="${m.url}"></div>`;
+            });
+
+            renderList();
+            updateMainMarkers();
+            if (loc.lat && loc.lng) mainMap.flyTo([loc.lat, loc.lng], 14);
+        }
+
+        function updateMainMarkers() {
+            mainMarkersLayer.clearLayers();
+            locations.forEach(loc => {
+                if (!loc.lat || !loc.lng) return;
+                const icon = L.divIcon({
+                    html: `<i class="fa-solid fa-location-dot ${currentId === loc.id ? 'text-indigo-600 scale-125' : 'text-rose-500'} text-2xl"></i>`,
+                    className: '', iconAnchor: [12, 24]
+                });
+                L.marker([loc.lat, loc.lng], { icon }).addTo(mainMarkersLayer).on('click', () => selectLoc(loc.id));
             });
         }
 
@@ -381,94 +326,82 @@
                 const loc = locations.find(l => l.id === currentId);
                 main.classList.add('hidden');
                 edit.classList.remove('hidden');
+                
                 document.getElementById('eTitle').value = loc.title;
                 document.getElementById('eDate').value = loc.date || "";
                 document.getElementById('eDesc').value = loc.description || "";
                 document.getElementById('eIsPublic').checked = loc.isPublic || false;
+                document.getElementById('eLat').value = loc.lat || "";
+                document.getElementById('eLng').value = loc.lng || "";
+                
                 currentEditingMedia = [...(loc.media || [])];
                 renderEditMedia();
-                updatePrivacyLabel();
+
+                // 更新編輯地圖視角
+                setTimeout(() => {
+                    editMap.invalidateSize();
+                    if (loc.lat && loc.lng) {
+                        setEditCoords(loc.lat, loc.lng);
+                        editMap.setView([loc.lat, loc.lng], 10);
+                    }
+                }, 100);
             } else {
                 edit.classList.add('hidden');
                 main.classList.remove('hidden');
             }
         };
 
-        window.triggerFileInput = () => document.getElementById('mediaInput').click();
-        
         window.handleFileSelection = async (e) => {
             const files = Array.from(e.target.files);
-            if (!files.length) return;
-            
-            const loading = document.getElementById('loadingOverlay');
-            loading.style.display = 'flex';
-            document.getElementById('loadingText').innerText = "正在處理高清壓縮...";
-            
-            for (let file of files) {
-                try {
-                    const base64 = await compressImage(file);
-                    currentEditingMedia.push({ type: 'image', url: base64 });
-                } catch (err) { console.error(err); }
+            document.getElementById('loadingOverlay').style.display = 'flex';
+            for (let f of files) {
+                const url = await compressImage(f);
+                currentEditingMedia.push({ url });
             }
             renderEditMedia();
-            loading.style.display = 'none';
-            e.target.value = '';
+            document.getElementById('loadingOverlay').style.display = 'none';
         };
 
         function renderEditMedia() {
             const grid = document.getElementById('editMediaGrid');
-            const placeholder = grid.querySelector('.upload-placeholder');
+            const ph = grid.querySelector('.upload-placeholder');
             grid.innerHTML = '';
             currentEditingMedia.forEach((m, i) => {
-                const div = document.createElement('div');
-                div.className = 'upload-preview';
-                div.innerHTML = `<img src="${m.url}"><div class="remove-img-btn" onclick="removeMedia(${i})"><i class="fa-solid fa-times"></i></div>`;
-                grid.appendChild(div);
+                grid.innerHTML += `<div class="upload-preview"><img src="${m.url}"><div class="remove-img-btn" onclick="removeMedia(${i})">×</div></div>`;
             });
-            grid.appendChild(placeholder);
+            grid.appendChild(ph);
         }
 
         window.removeMedia = (i) => { currentEditingMedia.splice(i, 1); renderEditMedia(); };
-        window.updatePrivacyLabel = () => {
-            document.getElementById('privacyDesc').innerText = document.getElementById('eIsPublic').checked ? "目前為：公開展示" : "目前為：私人專屬";
-        };
 
         window.saveChanges = async () => {
-            const loading = document.getElementById('loadingOverlay');
-            loading.style.display = 'flex';
-            document.getElementById('loadingText').innerText = "上載至雲端地圖...";
-            
+            document.getElementById('loadingOverlay').style.display = 'flex';
+            const lat = parseFloat(document.getElementById('eLat').value);
+            const lng = parseFloat(document.getElementById('eLng').value);
             const isPub = document.getElementById('eIsPublic').checked;
-            const fullLoc = locations.find(l => l.id === currentId);
-            
+
             const data = {
                 title: document.getElementById('eTitle').value,
                 date: document.getElementById('eDate').value,
                 description: document.getElementById('eDesc').value,
+                lat, lng,
                 isPublic: isPub,
                 media: currentEditingMedia,
                 updatedAt: serverTimestamp()
             };
 
             try {
-                // 更新私人空間
                 await setDoc(doc(db, 'artifacts', appId, 'users', auth.currentUser.uid, 'locations', currentId), data, {merge:true});
+                const pubDoc = doc(db, 'artifacts', appId, 'public', 'data', 'locations', currentId);
+                if (isPub) await setDoc(pubDoc, data, {merge:true});
+                else await deleteDoc(pubDoc).catch(()=>{});
                 
-                // 處理公開空間連動
-                const pubDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'locations', currentId);
-                if (isPub) {
-                    await setDoc(pubDocRef, { ...fullLoc, ...data });
-                } else {
-                    await deleteDoc(pubDocRef).catch(() => {});
-                }
-                
-                showToast("同步成功！");
+                showToast("更新成功！");
                 toggleEditMode();
             } catch(e) {
-                console.error(e);
-                showToast("錯誤：內容過大，請減少圖片數量");
+                showToast("儲存失敗，請檢查圖片大小");
             } finally {
-                loading.style.display = 'none';
+                document.getElementById('loadingOverlay').style.display = 'none';
             }
         };
 
@@ -478,7 +411,7 @@
             setTimeout(() => t.style.display = 'none', 3000);
         }
 
-        window.onload = () => { initMap(); loadData(); };
+        window.onload = initMaps;
     </script>
 </body>
 </html>
