@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>個人足跡 - 隱私與公開同步管理</title>
+    <title>足跡管理者中心</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -17,14 +17,15 @@
         
         .toast {
             position: fixed; bottom: 2rem; right: 2rem; padding: 1rem 1.5rem;
-            background: #334155; color: white; border-radius: 1rem;
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-            z-index: 1000; display: none;
+            background: #1e293b; color: white; border-radius: 1rem;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            z-index: 1000; display: none; animation: slideUp 0.3s ease;
         }
+        @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 
         .auth-modal {
             position: fixed; inset: 0; background: rgba(15, 23, 42, 0.8);
-            display: none; align-items: center; justify-content: center; z-index: 100; backdrop-filter: blur(4px);
+            display: none; align-items: center; justify-content: center; z-index: 100; backdrop-filter: blur(8px);
         }
 
         .media-grid {
@@ -32,181 +33,178 @@
             gap: 20px; margin-bottom: 24px;
         }
         .media-item {
-            width: 100%; height: 220px; border-radius: 16px; overflow: hidden;
+            width: 100%; height: 240px; border-radius: 20px; overflow: hidden;
             background: #f1f5f9; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
             position: relative; border: 1px solid #e2e8f0;
         }
-        .media-img, .media-video { width: 100%; height: 100%; object-fit: cover; background: black; }
+        .media-img, .media-video { width: 100%; height: 100%; object-fit: cover; }
         
-        .list-thumb {
-            width: 48px; height: 48px; border-radius: 12px;
-            object-fit: cover; background: #e2e8f0; flex-shrink: 0;
-            border: 1px solid rgba(0,0,0,0.05);
-        }
-        .list-icon-placeholder {
-            width: 48px; height: 48px; border-radius: 12px;
-            background: #f1f5f9; display: flex; align-items: center; justify-content: center;
-            color: #cbd5e1; flex-shrink: 0;
-        }
-
-        .nav-item-active { background-color: #4f46e5 !important; color: white !important; }
-        .nav-item-active .list-icon-placeholder { background: rgba(255,255,255,0.2); color: white; }
-
-        .google-auth-btn {
-            display: flex; align-items: center; gap: 8px; padding: 6px 16px;
-            background: white; color: #374151; border-radius: 99px;
-            font-size: 0.85rem; font-weight: 600; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        .user-avatar { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; }
-
-        .data-mode-badge { font-size: 10px; padding: 2px 8px; border-radius: 99px; font-weight: 900; }
+        .nav-item-active { background-color: #4f46e5 !important; color: white !important; box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.3); }
+        .data-mode-badge { font-size: 10px; padding: 3px 10px; border-radius: 99px; font-weight: 900; letter-spacing: 0.05em; }
         .mode-public { background: #10b981; color: white; }
         .mode-private { background: #6366f1; color: white; }
+        
+        .action-btn { transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
+        .action-btn:hover { transform: translateY(-2px); }
     </style>
 </head>
 <body class="h-screen flex flex-col md:flex-row overflow-hidden">
 
     <div id="toast" class="toast">訊息內容</div>
 
-    <!-- 登入彈窗 -->
+    <!-- 登入介面 -->
     <div id="authModal" class="auth-modal">
-        <div class="bg-white w-full max-w-md rounded-[2.5rem] p-8 shadow-2xl relative">
-            <button onclick="closeAuthModal()" class="absolute top-6 right-6 text-slate-300 hover:text-slate-900">
-                <i class="fa-solid fa-xmark text-xl"></i>
-            </button>
-            <div class="text-center mb-8">
-                <h2 class="text-3xl font-black text-slate-900 mb-2">管理回憶</h2>
-                <p class="text-slate-500 text-sm">登入以編輯您的足跡，並決定哪些回憶要與世界分享</p>
+        <div class="bg-white w-full max-w-sm rounded-[2.5rem] p-10 shadow-2xl text-center">
+            <div class="w-20 h-20 bg-indigo-100 text-indigo-600 rounded-3xl flex items-center justify-center mx-auto mb-6 text-3xl">
+                <i class="fa-solid fa-shield-halved"></i>
             </div>
-            <button onclick="loginWithGoogle()" class="w-full flex items-center justify-center gap-3 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-slate-700 hover:bg-slate-100">
-                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20">
-                使用 Google 帳號登入
+            <h2 class="text-3xl font-black text-slate-900 mb-2">管理者登入</h2>
+            <p class="text-slate-500 text-sm mb-8">管理您的足跡展區與隱私設置</p>
+            <button onclick="loginWithGoogle()" class="w-full flex items-center justify-center gap-3 py-4 bg-slate-900 text-white rounded-2xl font-bold hover:bg-slate-800 transition-all">
+                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20" class="brightness-200">
+                使用 Google 帳號管理
             </button>
+            <button onclick="closeAuthModal()" class="mt-4 text-slate-400 text-xs font-medium hover:text-slate-600">暫不登入，僅瀏覽公開內容</button>
         </div>
     </div>
 
     <!-- 左側邊欄 -->
-    <aside class="w-full md:w-80 bg-white border-b md:border-b-0 md:border-r border-slate-200 flex flex-col h-[35vh] md:h-full z-10 shrink-0">
-        <div class="p-4 bg-slate-900 text-white flex flex-col gap-4 shrink-0">
+    <aside class="w-full md:w-80 bg-white border-r border-slate-200 flex flex-col h-[40vh] md:h-full z-10 shrink-0">
+        <div class="p-6 bg-slate-900 text-white flex flex-col gap-5">
             <div class="flex justify-between items-center">
                 <div id="authStatusContainer"></div>
-                <button id="addBtn" onclick="addNewLocation()" class="hidden p-2 bg-indigo-600 hover:bg-indigo-500 rounded-xl transition-all">
+                <button id="addBtn" onclick="addNewLocation()" class="hidden w-10 h-10 flex items-center justify-center bg-indigo-600 hover:bg-indigo-500 rounded-xl transition-all shadow-lg shadow-indigo-900/20">
                     <i class="fa-solid fa-plus"></i>
                 </button>
             </div>
-            <div class="flex items-center justify-between">
-                <h1 class="font-bold text-lg tracking-tight">足跡展示</h1>
-                <span id="modeBadge" class="data-mode-badge mode-public">瀏覽公開內容</span>
+            <div>
+                <h1 class="font-black text-xl tracking-tight mb-1">足跡控制台</h1>
+                <span id="modeBadge" class="data-mode-badge mode-public">目前路徑：公開展區</span>
             </div>
         </div>
         
-        <!-- 切換器：僅登入後可見 -->
-        <div id="viewToggle" class="hidden p-3 bg-slate-50 border-b border-slate-200 flex gap-2">
-            <button onclick="switchViewMode('public')" id="btnPublicView" class="flex-1 py-2 rounded-lg text-[10px] font-black uppercase transition-all">公開展區</button>
-            <button onclick="switchViewMode('private')" id="btnPrivateView" class="flex-1 py-2 rounded-lg text-[10px] font-black uppercase transition-all">我的管理</button>
+        <!-- 管理切換器 -->
+        <div id="viewToggle" class="hidden p-4 bg-slate-50 border-b border-slate-200 flex gap-2">
+            <button onclick="switchViewMode('public')" id="btnPublicView" class="flex-1 py-2.5 rounded-xl text-[11px] font-black transition-all">公開展區</button>
+            <button onclick="switchViewMode('private')" id="btnPrivateView" class="flex-1 py-2.5 rounded-xl text-[11px] font-black transition-all">我的管理</button>
         </div>
 
-        <div id="locationList" class="flex-1 overflow-y-auto custom-scrollbar p-3 relative">
-            <div id="loadingIndicator" class="flex items-center justify-center h-full text-slate-300">
+        <div id="locationList" class="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-2">
+            <div id="loadingIndicator" class="flex items-center justify-center h-32 text-slate-300">
                 <i class="fa-solid fa-circle-notch fa-spin text-2xl"></i>
             </div>
         </div>
     </aside>
 
     <!-- 右側內容區 -->
-    <main class="flex-1 flex flex-col h-[65vh] md:h-full overflow-hidden bg-slate-50">
-        <div class="h-1/3 shrink-0 relative border-b border-slate-200">
+    <main class="flex-1 flex flex-col h-[60vh] md:h-full overflow-hidden bg-white">
+        <div class="h-2/5 md:h-1/2 shrink-0 relative">
             <div id="map"></div>
         </div>
 
-        <div class="h-2/3 overflow-y-auto custom-scrollbar p-4 md:p-8">
+        <div class="h-3/5 md:h-1/2 overflow-y-auto custom-scrollbar p-6 md:p-12">
             <div id="emptyState" class="flex flex-col items-center justify-center h-full text-slate-300">
-                <i class="fa-solid fa-mountain-sun text-6xl mb-4 opacity-20"></i>
-                <p>選擇一個地點，回味那段旅程</p>
+                <div class="w-24 h-24 bg-slate-50 rounded-full flex items-center justify-center mb-6">
+                    <i class="fa-solid fa-map-location-dot text-4xl opacity-20"></i>
+                </div>
+                <p class="font-medium">選取一個足跡以查看詳細內容</p>
             </div>
 
-            <div id="contentView" class="hidden max-w-5xl mx-auto space-y-8">
+            <div id="contentView" class="hidden max-w-4xl mx-auto space-y-10">
                 <!-- 顯示區 -->
-                <div id="displaySection" class="space-y-6">
-                    <div class="flex flex-col md:flex-row md:items-end justify-between gap-6">
-                        <div class="space-y-1">
-                            <div class="flex items-center gap-2">
-                                <p id="displayDate" class="text-indigo-500 font-black text-xs tracking-widest"></p>
+                <div id="displaySection">
+                    <div class="flex flex-col md:flex-row md:items-start justify-between gap-6 mb-10">
+                        <div class="space-y-3">
+                            <div class="flex items-center gap-3">
+                                <span id="displayDate" class="text-indigo-600 font-black text-xs tracking-widest uppercase"></span>
                                 <span id="contentPrivacyBadge" class="data-mode-badge"></span>
                             </div>
-                            <h2 id="displayTitle" class="text-4xl md:text-5xl font-black text-slate-900 tracking-tight"></h2>
-                            <p id="authorDisplay" class="text-xs text-slate-400 font-medium"></p>
+                            <h2 id="displayTitle" class="text-4xl md:text-6xl font-black text-slate-900 tracking-tight leading-tight"></h2>
+                            <div id="authorDisplay" class="flex items-center gap-2 text-slate-400 text-sm italic"></div>
                         </div>
-                        <div id="adminControls" class="hidden flex gap-2">
-                            <button onclick="toggleEditMode()" class="px-6 py-3 bg-white border border-slate-200 rounded-2xl shadow-sm font-bold text-slate-700 hover:bg-slate-50 transition-all flex items-center">
-                                <i class="fa-solid fa-sliders text-xs mr-2"></i> 管理與編輯
+                        
+                        <!-- 管理者快捷工具 -->
+                        <div id="adminControls" class="hidden flex flex-wrap gap-2">
+                            <button onclick="toggleEditMode()" class="action-btn px-5 py-3 bg-slate-900 text-white rounded-2xl font-bold text-sm flex items-center shadow-lg shadow-slate-200">
+                                <i class="fa-solid fa-pen-to-square mr-2 text-xs"></i> 編輯內容
                             </button>
-                            <button onclick="deleteLocation()" class="p-3 text-rose-500 hover:bg-rose-50 rounded-2xl transition-all" title="刪除此足跡">
+                            <button id="quickTogglePubBtn" onclick="quickToggleVisibility()" class="action-btn p-3 bg-white border border-slate-200 text-slate-600 rounded-2xl hover:bg-slate-50">
+                                <i class="fa-solid fa-eye-slash"></i>
+                            </button>
+                            <button onclick="deleteLocation()" class="action-btn p-3 text-rose-500 bg-rose-50 rounded-2xl hover:bg-rose-100">
                                 <i class="fa-solid fa-trash-can"></i>
                             </button>
                         </div>
                     </div>
+
                     <div id="mediaGallery" class="media-grid"></div>
-                    <div class="bg-white rounded-[2rem] shadow-sm border border-slate-100 p-8 md:p-12">
-                        <h3 class="text-[10px] font-black text-indigo-400 mb-6 tracking-[0.2em] uppercase">旅途故事 Story</h3>
-                        <div id="displayDescription" class="text-slate-700 leading-[2] whitespace-pre-wrap text-lg font-light"></div>
+
+                    <div class="mt-12">
+                        <h3 class="text-[11px] font-black text-slate-400 mb-6 tracking-[0.3em] uppercase flex items-center">
+                            <span class="w-8 h-[1px] bg-slate-200 mr-4"></span>
+                            旅途故事 Story
+                        </h3>
+                        <div id="displayDescription" class="text-slate-600 leading-[2.2] whitespace-pre-wrap text-lg md:text-xl font-light"></div>
                     </div>
                 </div>
 
-                <!-- 編輯與管理表單 -->
-                <div id="editForm" class="hidden bg-white rounded-[2.5rem] shadow-xl p-6 md:p-10 space-y-8 border border-slate-100">
-                    <div class="flex items-center justify-between">
-                        <h3 class="text-2xl font-black text-slate-900">編輯足跡</h3>
-                        <div class="flex items-center gap-4 p-3 bg-indigo-50 rounded-2xl">
+                <!-- 編輯表單 -->
+                <div id="editForm" class="hidden bg-slate-50 rounded-[3rem] p-8 md:p-12 border border-slate-100 space-y-8">
+                    <div class="flex items-center justify-between border-b border-slate-200 pb-8">
+                        <div>
+                            <h3 class="text-3xl font-black text-slate-900">編輯足跡資料</h3>
+                            <p class="text-slate-400 text-sm mt-1 font-medium">調整資訊並決定是否對公眾開放</p>
+                        </div>
+                        <div class="flex items-center gap-4 bg-white p-4 rounded-3xl border border-slate-100 shadow-sm">
                             <div class="text-right">
-                                <p class="text-[10px] font-black text-indigo-600 uppercase">公開展示狀態</p>
-                                <p id="statusLabel" class="text-[10px] text-slate-500">僅自己可見</p>
+                                <p class="text-[10px] font-black text-indigo-600 uppercase mb-1">公開展區狀態</p>
+                                <p id="statusLabel" class="text-xs font-bold text-slate-400">私人存檔</p>
                             </div>
                             <label class="relative inline-flex items-center cursor-pointer">
                                 <input type="checkbox" id="editPublicToggle" class="sr-only peer" onchange="updateStatusLabel()">
-                                <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+                                <div class="w-14 h-7 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
                             </label>
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div class="space-y-2">
-                            <label class="block text-xs font-black text-slate-400 ml-2">日期</label>
-                            <input type="date" id="editDateInput" class="w-full p-4 bg-slate-50 border-none rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div class="space-y-3">
+                            <label class="text-xs font-black text-slate-400 ml-2 uppercase tracking-wider">日期 Date</label>
+                            <input type="date" id="editDateInput" class="w-full p-5 bg-white border border-slate-100 rounded-2xl outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all font-bold">
                         </div>
-                        <div class="space-y-2">
-                            <label class="block text-xs font-black text-slate-400 ml-2">地點名稱</label>
-                            <input type="text" id="editTitleInput" class="w-full p-4 bg-slate-50 border-none rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500">
+                        <div class="space-y-3">
+                            <label class="text-xs font-black text-slate-400 ml-2 uppercase tracking-wider">標題 Title</label>
+                            <input type="text" id="editTitleInput" class="w-full p-5 bg-white border border-slate-100 rounded-2xl outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all font-bold" placeholder="輸入地點名稱...">
                         </div>
                     </div>
 
-                    <div class="space-y-3">
-                        <label class="block text-xs font-black text-slate-400 ml-2">多媒體內容 (圖片或影片網址)</label>
+                    <div class="space-y-4">
+                        <label class="text-xs font-black text-slate-400 ml-2 uppercase tracking-wider">多媒體內容 (圖片 / 影片)</label>
                         <div id="mediaInputsContainer" class="space-y-3"></div>
-                        <button onclick="addMediaInput('image')" class="w-full py-4 border-2 border-dashed border-slate-200 rounded-2xl text-slate-400 font-bold hover:text-indigo-500 hover:border-indigo-200 transition-all flex items-center justify-center gap-2">
-                            <i class="fa-solid fa-plus text-xs"></i> 新增內容連結
+                        <button onclick="addMediaInput('image')" class="w-full py-5 bg-white border-2 border-dashed border-slate-200 rounded-2xl text-slate-400 font-bold hover:text-indigo-600 hover:border-indigo-300 hover:bg-indigo-50 transition-all flex items-center justify-center gap-3">
+                            <i class="fa-solid fa-link text-xs"></i> 新增多媒體網址
                         </button>
                     </div>
 
-                    <div class="space-y-2">
-                        <label class="block text-xs font-black text-slate-400 ml-2">詳細故事</label>
-                        <textarea id="editDescInput" rows="6" class="w-full p-6 bg-slate-50 border-none rounded-[2rem] outline-none focus:ring-2 focus:ring-indigo-500" placeholder="在那裡發生了什麼有趣的事？"></textarea>
+                    <div class="space-y-3">
+                        <label class="text-xs font-black text-slate-400 ml-2 uppercase tracking-wider">內文故事 Description</label>
+                        <textarea id="editDescInput" rows="8" class="w-full p-8 bg-white border border-slate-100 rounded-[2.5rem] outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all text-lg font-light leading-relaxed" placeholder="寫下您的回憶..."></textarea>
                     </div>
                     
-                    <div class="flex gap-4">
-                        <button onclick="saveChanges()" class="flex-[2] bg-indigo-600 text-white font-black py-5 rounded-2xl shadow-lg hover:bg-indigo-700 transition-all">更新並同步</button>
-                        <button onclick="toggleEditMode()" class="flex-1 py-5 bg-slate-100 text-slate-500 font-bold rounded-2xl hover:bg-slate-200 transition-all">取消</button>
+                    <div class="flex gap-4 pt-4">
+                        <button onclick="saveChanges()" class="flex-[2] bg-indigo-600 text-white font-black py-6 rounded-2xl shadow-xl shadow-indigo-200 hover:bg-indigo-700 hover:scale-[1.02] active:scale-95 transition-all">更新資料</button>
+                        <button onclick="toggleEditMode()" class="flex-1 py-6 bg-white border border-slate-200 text-slate-400 font-bold rounded-2xl hover:bg-slate-50 transition-all">取消返回</button>
                     </div>
                 </div>
             </div>
-            <div class="h-24"></div>
+            <div class="h-32"></div>
         </div>
     </main>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, doc, setDoc, addDoc, onSnapshot, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, doc, setDoc, addDoc, onSnapshot, deleteDoc, serverTimestamp, query, where, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyBFBhaRtjzBcav9dI7TfNt0E2ZjjUW1b28",
@@ -226,11 +224,11 @@
         let locations = [];
         let currentId = null;
         let map, markersLayer, tempMarker;
-        let viewMode = 'public'; // 'public' 或 'private'
+        let viewMode = 'public';
         let unsubscribe = null;
 
         function initMap() {
-            map = L.map('map', { center: [23.6978, 120.9605], zoom: 7, zoomControl: false });
+            map = L.map('map', { center: [23.6, 121], zoom: 7, zoomControl: false });
             L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png').addTo(map);
             markersLayer = L.layerGroup().addTo(map);
             map.on('click', (e) => {
@@ -240,44 +238,51 @@
             });
         }
 
-        // 縮圖輔助
-        function getThumbnail(loc) {
-            if (loc.media && loc.media.length > 0) {
-                const firstImg = loc.media.find(m => m.type === 'image');
-                if (firstImg) return convertUrl(firstImg.url);
+        // 核心同步邏輯：管理員核對
+        async function syncPublicData(locId, data, isPublic) {
+            const publicRef = doc(db, 'artifacts', appId, 'public', 'data', 'locations', locId);
+            if (isPublic) {
+                // 只有明確標記為 isPublic: true 的才會寫入公共區
+                await setDoc(publicRef, { 
+                    ...data, 
+                    author: auth.currentUser?.displayName || "管理者",
+                    userId: auth.currentUser?.uid,
+                    managedAt: serverTimestamp()
+                }, { merge: true });
+            } else {
+                // 否則，無條件從公共區移除
+                await deleteDoc(publicRef).catch(() => {});
             }
-            return null;
-        }
-
-        function convertUrl(url) {
-            if (!url) return '';
-            if (url.includes("drive.google.com")) {
-                const id = url.match(/\/file\/d\/(.+?)\//)?.[1] || url.match(/id=(.+?)(&|$)/)?.[1];
-                return id ? `https://drive.google.com/uc?export=download&id=${id}` : url;
-            }
-            return url;
         }
 
         window.updateStatusLabel = () => {
             const isChecked = document.getElementById('editPublicToggle').checked;
-            document.getElementById('statusLabel').innerText = isChecked ? '所有人皆可看見' : '僅自己可見';
+            const label = document.getElementById('statusLabel');
+            label.innerText = isChecked ? '所有人皆可看見' : '私人存檔';
+            label.className = `text-xs font-bold ${isChecked ? 'text-emerald-500' : 'text-slate-400'}`;
         };
 
         window.switchViewMode = (mode) => {
             viewMode = mode;
             const isPub = mode === 'public';
             
-            if (auth.currentUser) {
-                document.getElementById('btnPublicView').className = isPub ? 'flex-1 py-2 rounded-lg text-[10px] font-black uppercase bg-slate-900 text-white shadow-md' : 'flex-1 py-2 rounded-lg text-[10px] font-black uppercase bg-white text-slate-400 border border-slate-100';
-                document.getElementById('btnPrivateView').className = !isPub ? 'flex-1 py-2 rounded-lg text-[10px] font-black uppercase bg-indigo-600 text-white shadow-md' : 'flex-1 py-2 rounded-lg text-[10px] font-black uppercase bg-white text-slate-400 border border-slate-100';
+            // UI 更新
+            const btnPub = document.getElementById('btnPublicView');
+            const btnPriv = document.getElementById('btnPrivateView');
+            
+            if (isPub) {
+                btnPub.className = 'flex-1 py-2.5 rounded-xl text-[11px] font-black bg-slate-900 text-white shadow-xl';
+                btnPriv.className = 'flex-1 py-2.5 rounded-xl text-[11px] font-black text-slate-400 hover:text-slate-600';
+                document.getElementById('modeBadge').className = 'data-mode-badge mode-public';
+                document.getElementById('modeBadge').innerText = '目前路徑：公開展區';
+            } else {
+                btnPriv.className = 'flex-1 py-2.5 rounded-xl text-[11px] font-black bg-indigo-600 text-white shadow-xl';
+                btnPub.className = 'flex-1 py-2.5 rounded-xl text-[11px] font-black text-slate-400 hover:text-slate-600';
+                document.getElementById('modeBadge').className = 'data-mode-badge mode-private';
+                document.getElementById('modeBadge').innerText = '目前路徑：我的管理';
             }
             
-            document.getElementById('modeBadge').innerText = isPub ? '瀏覽公開內容' : '我的回憶中心';
-            document.getElementById('modeBadge').className = `data-mode-badge ${isPub ? 'mode-public' : 'mode-private'}`;
-            
-            document.getElementById('addBtn').style.display = (!isPub && auth.currentUser) ? 'block' : 'none';
-            
-            // 切換模式時隱藏內容面板，回歸空狀態
+            document.getElementById('addBtn').style.display = (!isPub && auth.currentUser) ? 'flex' : 'none';
             document.getElementById('contentView').classList.add('hidden');
             document.getElementById('emptyState').classList.remove('hidden');
             currentId = null;
@@ -287,26 +292,33 @@
 
         async function loadData() {
             if (unsubscribe) unsubscribe();
-            document.getElementById('locationList').innerHTML = '<div class="flex items-center justify-center h-full text-slate-300"><i class="fa-solid fa-circle-notch fa-spin text-2xl"></i></div>';
+            document.getElementById('locationList').innerHTML = '<div class="flex items-center justify-center h-32 text-slate-300"><i class="fa-solid fa-circle-notch fa-spin text-2xl"></i></div>';
             
             let ref;
             if (viewMode === 'public') {
-                // 公開區域：抓取所有人共享的內容
+                // 公開查詢：這裡必須嚴格只抓取 isPublic 為 true 的
                 ref = collection(db, 'artifacts', appId, 'public', 'data', 'locations');
             } else if (auth.currentUser) {
-                // 私人管理：抓取當前用戶的所有內容（含已公開與未公開）
                 ref = collection(db, 'artifacts', appId, 'users', auth.currentUser.uid, 'locations');
             } else {
+                document.getElementById('locationList').innerHTML = '<div class="p-8 text-center text-slate-400 text-xs">請登入以管理內容</div>';
                 return;
             }
 
             unsubscribe = onSnapshot(ref, (snap) => {
                 locations = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                
+                // 管理者校驗：如果抓到不該出現在公開區的內容，自動過濾掉 (基於前端雙重保險)
+                if (viewMode === 'public') {
+                    locations = locations.filter(l => l.isPublic === true);
+                }
+
                 locations.sort((a, b) => (b.date || "").localeCompare(a.date || ""));
                 renderList(); 
                 updateMarkers();
-            }, (error) => {
-                console.error("載入失敗:", error);
+            }, (err) => {
+                console.error("Data Fetch Error:", err);
+                showToast("數據載入受限");
             });
         }
 
@@ -315,11 +327,18 @@
             const toggle = document.getElementById('viewToggle');
             
             if (user) {
-                container.innerHTML = `<div onclick="handleLogout()" class="google-auth-btn"><img src="${user.photoURL || 'https://ui-avatars.com/api/?name=User'}" class="user-avatar"><span>登出</span></div>`;
+                container.innerHTML = `
+                    <div onclick="handleLogout()" class="flex items-center gap-3 cursor-pointer group">
+                        <img src="${user.photoURL || 'https://ui-avatars.com/api/?name=Admin'}" class="w-8 h-8 rounded-xl border-2 border-slate-700 group-hover:border-indigo-500 transition-all">
+                        <div class="hidden md:block">
+                            <p class="text-[10px] font-black text-slate-500 uppercase">管理員</p>
+                            <p class="text-xs font-bold text-white">${user.displayName}</p>
+                        </div>
+                    </div>`;
                 toggle.classList.remove('hidden');
                 switchViewMode('private'); 
             } else {
-                container.innerHTML = `<div onclick="openAuthModal()" class="google-auth-btn"><i class="fa-solid fa-user-circle text-slate-400"></i><span>登入管理</span></div>`;
+                container.innerHTML = `<button onclick="openAuthModal()" class="px-4 py-2 bg-slate-800 text-white text-xs font-black rounded-lg hover:bg-slate-700 transition-all">管理者登入</button>`;
                 toggle.classList.add('hidden');
                 switchViewMode('public'); 
             }
@@ -329,22 +348,28 @@
             const list = document.getElementById('locationList');
             list.innerHTML = '';
             if (locations.length === 0) {
-                list.innerHTML = '<div class="p-8 text-center text-slate-300 text-xs font-medium">尚無足跡資料</div>';
+                list.innerHTML = '<div class="p-8 text-center text-slate-300 text-xs font-medium">查無內容</div>';
                 return;
             }
             locations.forEach(loc => {
                 const item = document.createElement('div');
-                item.className = `p-2 mb-1 cursor-pointer rounded-xl flex items-center gap-3 transition-all ${currentId === loc.id ? 'nav-item-active shadow-md' : 'hover:bg-slate-50 text-slate-600'}`;
+                const isActive = currentId === loc.id;
+                item.className = `p-4 cursor-pointer rounded-2xl flex items-center gap-4 transition-all duration-300 ${isActive ? 'nav-item-active' : 'hover:bg-slate-50 border border-transparent'}`;
                 
-                const thumb = getThumbnail(loc);
+                const thumb = (loc.media && loc.media.length > 0) ? convertUrl(loc.media[0].url) : null;
                 const thumbHtml = thumb 
-                    ? `<img src="${thumb}" class="list-thumb">` 
-                    : `<div class="list-icon-placeholder"><i class="fa-solid fa-map-pin"></i></div>`;
+                    ? `<img src="${thumb}" class="w-12 h-12 rounded-xl object-cover shadow-sm">` 
+                    : `<div class="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center text-slate-300"><i class="fa-solid fa-mountain"></i></div>`;
 
-                // 在私有模式下，如果是已公開的標註出來
-                const pubBadge = (viewMode === 'private' && loc.isPublic) ? '<span class="ml-auto text-[8px] bg-emerald-100 text-emerald-600 px-1.5 py-0.5 rounded-full font-black">已公開</span>' : '';
+                const pubBadge = (viewMode === 'private' && loc.isPublic) ? '<i class="fa-solid fa-globe text-[10px] text-emerald-400"></i>' : '';
 
-                item.innerHTML = `${thumbHtml}<div class="truncate font-bold text-xs flex-1">${loc.title}</div>${pubBadge}`;
+                item.innerHTML = `
+                    ${thumbHtml}
+                    <div class="flex-1 min-w-0">
+                        <div class="font-black text-sm truncate ${isActive ? 'text-white' : 'text-slate-700'}">${loc.title}</div>
+                        <div class="text-[10px] ${isActive ? 'text-indigo-200' : 'text-slate-400'} font-bold mt-0.5">${loc.date || '無日期'} ${pubBadge}</div>
+                    </div>
+                `;
                 item.onclick = () => selectLoc(loc.id);
                 list.appendChild(item);
             });
@@ -360,13 +385,19 @@
             document.getElementById('displaySection').classList.remove('hidden');
             document.getElementById('editForm').classList.add('hidden');
             
-            // 只有在私人模式且是本人時才能看到管理按鈕
-            document.getElementById('adminControls').style.display = (viewMode === 'private' && auth.currentUser) ? 'flex' : 'none';
+            // 管理權限檢查：只有本人能管理
+            const isAdmin = auth.currentUser && (loc.userId === auth.currentUser.uid || viewMode === 'private');
+            document.getElementById('adminControls').style.display = isAdmin ? 'flex' : 'none';
+            
+            // 快捷按鈕狀態更新
+            const quickBtn = document.getElementById('quickTogglePubBtn');
+            quickBtn.innerHTML = loc.isPublic ? '<i class="fa-solid fa-eye-slash"></i>' : '<i class="fa-solid fa-eye text-emerald-500"></i>';
+            quickBtn.title = loc.isPublic ? "從展區收回" : "發布到展區";
 
             document.getElementById('displayTitle').innerText = loc.title;
             document.getElementById('displayDate').innerText = loc.date || "未提供日期";
             document.getElementById('displayDescription').innerText = loc.description || "尚未寫下故事...";
-            document.getElementById('authorDisplay').innerText = (viewMode === 'public' && loc.author) ? `由 ${loc.author} 分享` : "";
+            document.getElementById('authorDisplay').innerHTML = loc.author ? `<i class="fa-solid fa-user-pen text-[10px]"></i> By ${loc.author}` : "";
             
             const pBadge = document.getElementById('contentPrivacyBadge');
             pBadge.innerText = loc.isPublic ? "公開展示中" : "私人回憶";
@@ -374,7 +405,7 @@
 
             const gallery = document.getElementById('mediaGallery'); gallery.innerHTML = '';
             (loc.media || []).forEach(m => {
-                const div = document.createElement('div'); div.className = 'media-item';
+                const div = document.createElement('div'); div.className = 'media-item shadow-xl';
                 const url = convertUrl(m.url);
                 div.innerHTML = m.type === 'image' ? `<img src="${url}" class="media-img">` : `<video src="${url}" class="media-video" controls></video>`;
                 gallery.appendChild(div);
@@ -382,6 +413,28 @@
 
             if (shouldFly && loc.lat) map.flyTo([loc.lat, loc.lng], 12);
             renderList(); updateMarkers();
+        };
+
+        // 管理員快捷收回/發布功能
+        window.quickToggleVisibility = async () => {
+            if (!auth.currentUser) return;
+            const loc = locations.find(l => l.id === currentId);
+            const nextState = !loc.isPublic;
+            
+            try {
+                // 更新私人路徑
+                const privRef = doc(db, 'artifacts', appId, 'users', auth.currentUser.uid, 'locations', currentId);
+                await setDoc(privRef, { isPublic: nextState }, { merge: true });
+                
+                // 同步公共路徑
+                await syncPublicData(currentId, { ...loc, isPublic: nextState }, nextState);
+                
+                showToast(nextState ? "已成功發布至公開展區" : "已從公開展區收回");
+                selectLoc(currentId, false);
+            } catch (e) {
+                console.error(e);
+                showToast("操作失敗");
+            }
         };
 
         window.toggleEditMode = () => {
@@ -407,11 +460,11 @@
         window.addMediaInput = (type, val = '') => {
             const container = document.getElementById('mediaInputsContainer');
             const div = document.createElement('div');
-            div.className = 'flex items-center gap-2 bg-slate-50 p-3 rounded-2xl border border-slate-100';
+            div.className = 'flex items-center gap-3 bg-white p-4 rounded-2xl border border-slate-100 shadow-sm';
             div.innerHTML = `
-                <select class="bg-transparent text-[10px] font-black outline-none border-r border-slate-200 pr-2"><option value="image" ${type==='image'?'selected':''}>照片</option><option value="video" ${type==='video'?'selected':''}>影片</option></select>
-                <input type="text" class="flex-1 text-xs bg-transparent outline-none ml-2" placeholder="貼上網址..." value="${val}">
-                <button onclick="this.parentElement.remove()" class="text-slate-300 hover:text-rose-500 px-2 transition-all"><i class="fa-solid fa-trash-can text-xs"></i></button>
+                <select class="bg-slate-50 text-[10px] font-black outline-none p-2 rounded-lg"><option value="image" ${type==='image'?'selected':''}>圖片</option><option value="video" ${type==='video'?'selected':''}>影片</option></select>
+                <input type="text" class="flex-1 text-sm bg-transparent outline-none font-medium" placeholder="https://..." value="${val}">
+                <button onclick="this.parentElement.remove()" class="text-slate-300 hover:text-rose-500 transition-all"><i class="fa-solid fa-trash-can"></i></button>
             `;
             container.appendChild(div);
         };
@@ -430,7 +483,7 @@
 
             const isPublic = document.getElementById('editPublicToggle').checked;
             const baseData = {
-                title: document.getElementById('editTitleInput').value || "無題地點",
+                title: document.getElementById('editTitleInput').value || "未命名地點",
                 date: document.getElementById('editDateInput').value,
                 description: document.getElementById('editDescInput').value,
                 media: media,
@@ -440,30 +493,15 @@
             if (tempMarker) { const p = tempMarker.getLatLng(); baseData.lat = p.lat; baseData.lng = p.lng; }
 
             try {
-                // 1. 儲存至私人空間
                 const privateRef = doc(db, 'artifacts', appId, 'users', auth.currentUser.uid, 'locations', currentId);
                 await setDoc(privateRef, baseData, { merge: true });
+                await syncPublicData(currentId, baseData, isPublic);
 
-                // 2. 處理公開同步
-                const publicRef = doc(db, 'artifacts', appId, 'public', 'data', 'locations', currentId);
-                if (isPublic) {
-                    // 若設為公開，將資料複製到公開區域並標註作者
-                    await setDoc(publicRef, { 
-                        ...baseData, 
-                        author: auth.currentUser.displayName || "匿名旅人",
-                        userId: auth.currentUser.uid // 方便系統識別來源
-                    }, { merge: true });
-                } else {
-                    // 若設為隱藏，確保從公開區域刪除
-                    await deleteDoc(publicRef).catch(() => {});
-                }
-
-                showToast(isPublic ? "已儲存並公開展示" : "已儲存（私人收藏）");
+                showToast("管理設定已更新");
                 toggleEditMode();
                 selectLoc(currentId, false);
             } catch (e) {
                 showToast("儲存失敗");
-                console.error(e);
             }
         };
 
@@ -471,18 +509,19 @@
             if (!auth.currentUser) return;
             const ref = collection(db, 'artifacts', appId, 'users', auth.currentUser.uid, 'locations');
             const res = await addDoc(ref, { 
-                title: "探索新地點", 
+                title: "新地點探索", 
                 date: new Date().toISOString().split('T')[0], 
                 lat: 23.6, lng: 121, 
                 media: [], 
-                isPublic: false 
+                isPublic: false,
+                userId: auth.currentUser.uid
             });
             currentId = res.id;
             toggleEditMode();
         };
 
         window.deleteLocation = async () => {
-            if (!confirm("確定要刪除這筆足跡嗎？此動作無法復原。")) return;
+            if (!confirm("確定要刪除此內容嗎？系統將同步從私人與公開展區移除。")) return;
             const uid = auth.currentUser.uid;
             await deleteDoc(doc(db, 'artifacts', appId, 'users', uid, 'locations', currentId));
             await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'locations', currentId)).catch(()=>{});
@@ -490,7 +529,7 @@
             currentId = null;
             document.getElementById('contentView').classList.add('hidden');
             document.getElementById('emptyState').classList.remove('hidden');
-            showToast("足跡已移除");
+            showToast("內容已永久刪除");
         };
 
         window.updateMarkers = () => {
@@ -498,13 +537,22 @@
             locations.forEach(loc => {
                 if (loc.lat) {
                     const icon = L.divIcon({ 
-                        html: `<i class="fa-solid fa-location-dot ${currentId===loc.id?'text-indigo-600 scale-150':'text-rose-500'} text-xl transition-all"></i>`, 
-                        className: '', iconAnchor: [10, 20] 
+                        html: `<div class="relative"><i class="fa-solid fa-location-dot ${currentId===loc.id?'text-indigo-600 scale-150 drop-shadow-lg':'text-rose-500'} text-2xl transition-all duration-500"></i>${loc.isPublic && viewMode==='private'?'<div class="absolute -top-1 -right-1 w-2 h-2 bg-emerald-400 rounded-full border border-white"></div>':''}</div>`, 
+                        className: '', iconAnchor: [12, 24] 
                     });
                     L.marker([loc.lat, loc.lng], { icon }).addTo(markersLayer).on('click', () => selectLoc(loc.id));
                 }
             });
         };
+
+        function convertUrl(url) {
+            if (!url) return '';
+            if (url.includes("drive.google.com")) {
+                const id = url.match(/\/file\/d\/(.+?)\//)?.[1] || url.match(/id=(.+?)(&|$)/)?.[1];
+                return id ? `https://drive.google.com/uc?export=download&id=${id}` : url;
+            }
+            return url;
+        }
 
         window.handleLogout = () => signOut(auth).then(() => location.reload());
         window.loginWithGoogle = () => signInWithPopup(auth, googleProvider).then(() => closeAuthModal());
