@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>足跡管理者中心 - 手機優化版</title>
+    <title>足跡管理者中心 - 高解析優化版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -74,13 +74,12 @@
 
     <div id="loadingOverlay" class="loading-overlay">
         <div class="spinner"></div>
-        <p class="mt-4 font-bold text-slate-600">正在壓縮並更新圖片...</p>
+        <p id="loadingText" class="mt-4 font-bold text-slate-600">正在優化圖片品質...</p>
     </div>
 
     <div id="toast" class="toast">訊息提示</div>
 
     <div id="app-container">
-        <!-- Sidebar 與主畫面佈局保持不變 -->
         <div class="sidebar-admin">
             <header class="layer-1">
                 <div class="flex items-center justify-between w-full">
@@ -154,7 +153,7 @@
 
                     <div class="space-y-4">
                         <div>
-                            <label class="text-[11px] font-black text-slate-400 ml-2 mb-2 block uppercase">照片上傳 (手機自動縮圖)</label>
+                            <label class="text-[11px] font-black text-slate-400 ml-2 mb-2 block uppercase">照片上傳 (已優化 2MB 寬頻處理)</label>
                             <div class="upload-grid" id="editMediaGrid">
                                 <div class="upload-placeholder" onclick="triggerFileInput()"><i class="fa-solid fa-camera mb-1"></i><span class="text-[9px] font-black">新增照片</span></div>
                             </div>
@@ -193,7 +192,7 @@
         let unsub = null;
         let currentEditingMedia = [];
 
-        // 核心圖片壓縮函式：將大型手機照片縮小到適中大小
+        // 核心圖片壓縮函式更新：針對 Firestore 限制與視覺平衡進行優化
         async function compressImage(file) {
             return new Promise((resolve) => {
                 const reader = new FileReader();
@@ -203,22 +202,32 @@
                     img.src = event.target.result;
                     img.onload = () => {
                         const canvas = document.createElement('canvas');
-                        let width = img.width;
-                        let height = img.height;
-                        const MAX_WIDTH = 1200; // 限制寬度在 1200px
-                        const MAX_HEIGHT = 1200;
-
+                        let width = img.width, height = img.height;
+                        
+                        // 系統極限考量：
+                        // Firestore 單個 doc 限制為 1MB。Base64 會膨脹體積。
+                        // 我們設定最大邊長為 1600px，這在 4K 螢幕以下都有很好的細節。
+                        const MAX_SIZE = 1600; 
+                        
                         if (width > height) {
-                            if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
+                            if (width > MAX_SIZE) { height *= MAX_SIZE / width; width = MAX_SIZE; }
                         } else {
-                            if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; }
+                            if (height > MAX_SIZE) { width *= MAX_SIZE / height; height = MAX_SIZE; }
                         }
+                        
                         canvas.width = width;
                         canvas.height = height;
                         const ctx = canvas.getContext('2d');
+                        
+                        // 使用更高的繪圖品質
+                        ctx.imageSmoothingEnabled = true;
+                        ctx.imageSmoothingQuality = 'high';
                         ctx.drawImage(img, 0, 0, width, height);
-                        // 品質設為 0.7 既清晰又能大幅減少體積
-                        resolve(canvas.toDataURL('image/jpeg', 0.7));
+                        
+                        // 輸出為 JPEG，品質 0.8 是體積與清晰度的黃金分割點
+                        // 預計單張圖片會在 150KB - 300KB 左右，
+                        // 這樣一個足跡存放 3-4 張照片仍能符合 Firestore 1MB 的限制。
+                        resolve(canvas.toDataURL('image/jpeg', 0.8));
                     };
                 };
             });
@@ -251,6 +260,9 @@
 
         window.switchViewMode = (mode) => {
             viewMode = mode;
+            currentId = null;
+            document.getElementById('mainContent').classList.add('hidden');
+            document.getElementById('emptyContent').classList.remove('hidden');
             document.getElementById('btnPublic').className = mode === 'public' ? 'flex-1 py-2.5 rounded-xl text-[11px] font-black nav-active text-center' : 'flex-1 py-2.5 rounded-xl text-[11px] font-black text-slate-400 bg-slate-50 text-center';
             document.getElementById('btnPrivate').className = mode === 'private' ? 'flex-1 py-2.5 rounded-xl text-[11px] font-black nav-active text-center' : 'flex-1 py-2.5 rounded-xl text-[11px] font-black text-slate-400 bg-slate-50 text-center';
             loadData();
@@ -264,13 +276,9 @@
 
             unsub = onSnapshot(ref, (snap) => {
                 let raw = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-                locations = (viewMode === 'public') ? raw.filter(l => l.isPublic) : raw;
+                locations = (viewMode === 'public') ? raw.filter(l => l.isPublic === true) : raw;
                 locations.sort((a, b) => (b.date || "").localeCompare(a.date || ""));
                 renderList(); updateMarkers();
-                if (currentId) {
-                    const l = locations.find(x => x.id === currentId);
-                    if (l) updateDetailUI(l);
-                }
             });
         }
 
@@ -348,9 +356,15 @@
             const files = Array.from(e.target.files);
             if (!files.length) return;
             document.getElementById('loadingOverlay').style.display = 'flex';
+            document.getElementById('loadingText').innerText = "正在處理高解析度優化...";
+            
             for (let file of files) {
-                const compressedUrl = await compressImage(file);
-                currentEditingMedia.push({ type: 'image', url: compressedUrl });
+                try {
+                    const compressedUrl = await compressImage(file);
+                    currentEditingMedia.push({ type: 'image', url: compressedUrl });
+                } catch (err) {
+                    console.error("圖片處理失敗", err);
+                }
             }
             renderEditMedia();
             document.getElementById('loadingOverlay').style.display = 'none';
@@ -378,8 +392,19 @@
         window.saveChanges = async () => {
             const loading = document.getElementById('loadingOverlay');
             loading.style.display = 'flex';
+            document.getElementById('loadingText').innerText = "正在同步數據到雲端...";
+            
             const isPub = document.getElementById('eIsPublic').checked;
             const fullLoc = locations.find(l => l.id === currentId);
+            
+            // 系統極限檢查：計算媒體資料總體積
+            const mediaSize = JSON.stringify(currentEditingMedia).length;
+            if (mediaSize > 850000) { // 預留空間給文字，大約 850KB
+                loading.style.display = 'none';
+                showToast("錯誤：圖片過多或解析度過高，超過儲存極限。請刪除一張照片後重試。");
+                return;
+            }
+
             const data = {
                 title: document.getElementById('eTitle').value,
                 date: document.getElementById('eDate').value,
@@ -388,14 +413,21 @@
                 media: currentEditingMedia,
                 updatedAt: serverTimestamp()
             };
+
             try {
                 await setDoc(doc(db, 'artifacts', appId, 'users', auth.currentUser.uid, 'locations', currentId), data, {merge:true});
-                const pubDoc = doc(db, 'artifacts', appId, 'public', 'data', 'locations', currentId);
-                if (isPub && data.date) await setDoc(pubDoc, { ...fullLoc, ...data });
-                else await deleteDoc(pubDoc).catch(()=>{});
-                showToast("更新完成！");
+                const pubDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'locations', currentId);
+                if (isPub) {
+                    await setDoc(pubDocRef, { ...fullLoc, ...data });
+                } else {
+                    await deleteDoc(pubDocRef).catch(() => {});
+                }
+                showToast("更新完成！解析度已優化");
                 toggleEditMode();
-            } catch(e) { showToast("上傳失敗，請檢查網路"); }
+            } catch(e) { 
+                console.error(e);
+                showToast("儲存失敗：可能超過單一文件 1MB 的限制"); 
+            }
             finally { loading.style.display = 'none'; }
         };
 
