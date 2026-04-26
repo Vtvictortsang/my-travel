@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>足跡管理者中心 - 完整登入優化版</title>
+    <title>足跡管理者中心 - 邏輯優化版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -19,7 +19,6 @@
             overflow: hidden;
         }
 
-        /* --- 基礎佈局：Desktop 橫向分欄 --- */
         #app-container { 
             display: flex; 
             flex-direction: row; 
@@ -47,7 +46,6 @@
             scroll-behavior: smooth;
         }
 
-        /* --- 手機版 (Mobile) 響應式優化 --- */
         @media (max-width: 768px) {
             body { overflow-y: auto; height: auto; }
             #app-container { flex-direction: column; height: auto; }
@@ -58,12 +56,25 @@
             #cTitle { font-size: 2.2rem !important; line-height: 1.2; }
         }
 
-        /* 元件樣式 */
         .layer-1 { height: 70px; background: #1e293b; display: flex; align-items: center; padding: 0 1.25rem; z-index: 50; flex-shrink: 0; }
         .layer-2 { height: 280px; position: relative; background: #e2e8f0; flex-shrink: 0; }
         .layer-3 { flex: 1; background: #ffffff; display: flex; flex-direction: column; overflow: hidden; }
         
-        #locationScroller { flex-direction: column; overflow-y: auto; padding: 1rem; gap: 12px; display: flex; }
+        #locationScroller { flex-direction: column; overflow-y: auto; padding: 1rem; gap: 8px; display: flex; }
+        
+        .date-divider {
+            padding: 20px 8px 10px 8px;
+            font-size: 11px;
+            font-weight: 900;
+            color: #94a3b8;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .date-divider::after { content: ""; flex: 1; height: 1px; background: #f1f5f9; }
+
         .loc-item { width: 100%; display: flex; flex-direction: row; align-items: center; padding: 12px; background: #fff; border-radius: 12px; border: 1px solid #f1f5f9; cursor: pointer; transition: all 0.2s ease; }
         .loc-thumb { width: 48px; height: 48px; border-radius: 8px; object-fit: cover; background: #f1f5f9; }
         .loc-item p { font-size: 15px; margin: 0 0 0 12px; font-weight: 700; color: #334155; }
@@ -94,7 +105,6 @@
         <div class="sidebar-admin">
             <header class="layer-1">
                 <div class="flex items-center justify-between w-full">
-                    <!-- 點擊頭像區塊進行登入/登出 -->
                     <div id="userProfile" onclick="handleAuthClick()" class="flex items-center gap-3 cursor-pointer group">
                         <div id="userAvatar" class="w-10 h-10 rounded-xl bg-slate-700 flex items-center justify-center text-white overflow-hidden shadow-inner group-hover:ring-2 group-hover:ring-indigo-400 transition-all">
                             <i class="fa-solid fa-user"></i>
@@ -115,12 +125,15 @@
             </section>
 
             <section class="layer-3">
-                <div class="p-4 flex gap-2 shrink-0 bg-white border-b border-slate-50">
-                    <button onclick="switchViewMode('public')" id="btnPublic" class="flex-1 py-2.5 rounded-xl text-[11px] font-black transition-all nav-active">公開展區</button>
-                    <button onclick="switchViewMode('private')" id="btnPrivate" class="hidden flex-1 py-2.5 rounded-xl text-[11px] font-black text-slate-400 bg-slate-50 border border-slate-100 transition-all">我的管理後台</button>
+                <!-- 按鈕置中優化 -->
+                <div class="p-4 flex justify-center shrink-0 bg-white border-b border-slate-50">
+                    <div class="flex gap-2 w-full max-w-[320px]">
+                        <button onclick="switchViewMode('public')" id="btnPublic" class="flex-1 py-2.5 rounded-xl text-[11px] font-black transition-all nav-active text-center">公開展區</button>
+                        <button onclick="switchViewMode('private')" id="btnPrivate" class="hidden flex-1 py-2.5 rounded-xl text-[11px] font-black text-slate-400 bg-slate-50 border border-slate-100 transition-all text-center">管理後台</button>
+                    </div>
                 </div>
                 <div id="locationScroller" class="flex-1 custom-scrollbar bg-white">
-                    <!-- 清單 -->
+                    <!-- 清單與年份標籤將注入於此 -->
                 </div>
             </section>
         </div>
@@ -129,7 +142,7 @@
         <div id="contentView" class="main-content-view custom-scrollbar">
             <div id="emptyContent" class="h-full min-h-[60vh] flex flex-col items-center justify-center text-slate-300 p-10 text-center">
                 <div class="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-6">
-                    <i class="fa-solid fa-map-location-dot text-4xl opacity-20"></i>
+                    <i class="fa-solid fa-calendar-days text-4xl opacity-20"></i>
                 </div>
                 <h3 class="text-slate-900 font-black text-lg">探索足跡故事</h3>
                 <p class="text-slate-400 text-sm mt-2">請從左側清單選擇地點或點擊地圖標記</p>
@@ -213,10 +226,11 @@
             markersLayer = L.layerGroup().addTo(map);
         }
 
-        // 登入處理
         window.handleAuthClick = () => {
             if (auth.currentUser) {
-                if(confirm("確定要登出嗎？")) signOut(auth);
+                if(confirm("確定要登出嗎？")) signOut(auth).then(() => {
+                   window.location.reload();
+                });
             } else {
                 signInWithPopup(auth, provider).then(() => showToast("歡迎回來！")).catch(e => console.error(e));
             }
@@ -232,7 +246,7 @@
                 avatar.innerHTML = `<img src="${user.photoURL}" class="w-full h-full object-cover">`;
                 name.innerText = user.displayName;
                 label.innerText = "已登入 (點擊登出)";
-                btnPrivate.style.display = 'flex';
+                btnPrivate.style.display = 'block';
                 switchViewMode('private');
             } else {
                 avatar.innerHTML = `<i class="fa-solid fa-user"></i>`;
@@ -246,8 +260,8 @@
         window.switchViewMode = (mode) => {
             viewMode = mode;
             const isPub = mode === 'public';
-            document.getElementById('btnPublic').className = isPub ? 'flex-1 py-2.5 rounded-xl text-[11px] font-black transition-all nav-active' : 'flex-1 py-2.5 rounded-xl text-[11px] font-black text-slate-400 bg-slate-50 border border-slate-100';
-            document.getElementById('btnPrivate').className = !isPub ? 'flex-1 py-2.5 rounded-xl text-[11px] font-black nav-active' : 'flex-1 py-2.5 rounded-xl text-[11px] font-black text-slate-400 bg-slate-50 border border-slate-100';
+            document.getElementById('btnPublic').className = isPub ? 'flex-1 py-2.5 rounded-xl text-[11px] font-black transition-all nav-active text-center' : 'flex-1 py-2.5 rounded-xl text-[11px] font-black text-slate-400 bg-slate-50 border border-slate-100 text-center';
+            document.getElementById('btnPrivate').className = !isPub ? 'flex-1 py-2.5 rounded-xl text-[11px] font-black nav-active text-center' : 'flex-1 py-2.5 rounded-xl text-[11px] font-black text-slate-400 bg-slate-50 border border-slate-100 text-center';
             document.getElementById('addBtn').style.display = (!isPub && auth.currentUser) ? 'flex' : 'none';
             loadData();
         };
@@ -259,18 +273,53 @@
                 : collection(db, 'artifacts', appId, 'users', auth.currentUser.uid, 'locations');
 
             unsub = onSnapshot(ref, (snap) => {
-                locations = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-                if (viewMode === 'public') locations = locations.filter(l => l.isPublic === true);
-                locations.sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+                let rawLocations = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                
+                // 公開展區邏輯：必須是公開且必須有日期
+                if (viewMode === 'public') {
+                    locations = rawLocations.filter(l => l.isPublic === true && l.date && l.date !== "");
+                } else {
+                    locations = rawLocations;
+                }
+
+                // 排序：從新到舊
+                locations.sort((a, b) => (b.date || "0000-00-00").localeCompare(a.date || "0000-00-00"));
                 renderList(); 
                 updateMarkers();
+            }, (err) => {
+                console.error("Firestore Error:", err);
             });
         }
 
         function renderList() {
             const container = document.getElementById('locationScroller');
             container.innerHTML = '';
+            
+            let lastYear = null;
+            let lastMonth = null;
+
             locations.forEach(loc => {
+                if (loc.date) {
+                    const d = new Date(loc.date);
+                    const y = d.getFullYear();
+                    const m = d.getMonth() + 1;
+                    
+                    if (y !== lastYear || m !== lastMonth) {
+                        const divider = document.createElement('div');
+                        divider.className = 'date-divider';
+                        divider.innerHTML = `<span>${y}年 ${m}月</span>`;
+                        container.appendChild(divider);
+                        lastYear = y;
+                        lastMonth = m;
+                    }
+                } else if (lastYear !== "未分類") {
+                    const divider = document.createElement('div');
+                    divider.className = 'date-divider';
+                    divider.innerHTML = `<span>未註記日期</span>`;
+                    container.appendChild(divider);
+                    lastYear = "未分類";
+                }
+
                 const div = document.createElement('div');
                 div.className = `loc-item ${currentId === loc.id ? 'loc-active' : ''}`;
                 const thumb = (loc.media && loc.media[0]) ? loc.media[0].url : 'https://ui-avatars.com/api/?background=f1f5f9&color=cbd5e1&name=Spot';
@@ -312,7 +361,6 @@
             renderList(); 
             updateMarkers();
 
-            // 手機版平滑捲動
             if (window.innerWidth <= 768) {
                 document.getElementById('contentView').scrollIntoView({ behavior: 'smooth' });
             } else {
