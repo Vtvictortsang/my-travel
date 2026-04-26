@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>足跡管理者中心 - 響應式優化版</title>
+    <title>足跡管理者中心 - 完整登入優化版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -11,13 +11,10 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&display=swap');
         
-        :root { --vh: 1vh; }
-
         body { 
             font-family: 'Noto Sans TC', sans-serif; 
             background-color: #f8fafc; 
             margin: 0; padding: 0;
-            /* 電腦版固定高度，手機版允許捲動 */
             height: 100vh;
             overflow: hidden;
         }
@@ -30,7 +27,6 @@
             width: 100%; 
         }
 
-        /* 側邊欄 (管理與地圖) */
         .sidebar-admin { 
             width: 380px; 
             height: 100%; 
@@ -42,83 +38,43 @@
             flex-shrink: 0;
         }
 
-        /* 內容區 (詳細故事) */
         .main-content-view { 
             flex: 1; 
             height: 100%; 
             overflow-y: auto; 
             background: #fcfcfd; 
             position: relative;
-            scroll-behavior: smooth; /* 平滑捲動關鍵 */
+            scroll-behavior: smooth;
         }
 
-        /* --- 手機版 (Mobile) 樣式覆蓋 --- */
+        /* --- 手機版 (Mobile) 響應式優化 --- */
         @media (max-width: 768px) {
-            body { overflow-y: auto; height: auto; } /* 允許整頁捲動 */
-            
-            #app-container { 
-                flex-direction: column; 
-                height: auto; 
-            }
-            
-            .sidebar-admin { 
-                width: 100%; 
-                height: 90vh; /* 地圖與清單佔據手機第一屏的大部分 */
-                border-right: none;
-                border-bottom: 1px solid #e2e8f0;
-            }
-
-            .main-content-view { 
-                width: 100%;
-                height: auto;
-                min-height: 100vh; /* 內容區作為第二屏出現 */
-                background: white;
-            }
-
-            .layer-2 { height: 35vh !important; } /* 手機地圖高度 */
-            
-            /* 手機版內容間距優化 */
+            body { overflow-y: auto; height: auto; }
+            #app-container { flex-direction: column; height: auto; }
+            .sidebar-admin { width: 100%; height: 92vh; border-right: none; border-bottom: 1px solid #e2e8f0; }
+            .main-content-view { width: 100%; height: auto; min-height: 100vh; background: white; }
+            .layer-2 { height: 35vh !important; }
             .content-padding { padding: 2.5rem 1.5rem !important; }
             #cTitle { font-size: 2.2rem !important; line-height: 1.2; }
         }
 
-        /* 其他元件樣式 */
+        /* 元件樣式 */
         .layer-1 { height: 70px; background: #1e293b; display: flex; align-items: center; padding: 0 1.25rem; z-index: 50; flex-shrink: 0; }
         .layer-2 { height: 280px; position: relative; background: #e2e8f0; flex-shrink: 0; }
         .layer-3 { flex: 1; background: #ffffff; display: flex; flex-direction: column; overflow: hidden; }
         
-        #locationScroller { 
-            flex-direction: column; 
-            overflow-y: auto; 
-            padding: 1rem;
-            gap: 12px;
-            display: flex;
-        }
-
-        .loc-item { 
-            width: 100%; 
-            display: flex; 
-            flex-direction: row;
-            align-items: center; 
-            padding: 12px;
-            background: #fff;
-            border-radius: 12px;
-            border: 1px solid #f1f5f9;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-        .loc-item:hover { border-color: #cbd5e1; }
+        #locationScroller { flex-direction: column; overflow-y: auto; padding: 1rem; gap: 12px; display: flex; }
+        .loc-item { width: 100%; display: flex; flex-direction: row; align-items: center; padding: 12px; background: #fff; border-radius: 12px; border: 1px solid #f1f5f9; cursor: pointer; transition: all 0.2s ease; }
         .loc-thumb { width: 48px; height: 48px; border-radius: 8px; object-fit: cover; background: #f1f5f9; }
         .loc-item p { font-size: 15px; margin: 0 0 0 12px; font-weight: 700; color: #334155; }
         .loc-active { background-color: #f0f3ff !important; border-color: #6366f1 !important; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.1); }
 
         #map { height: 100%; width: 100%; }
-
         .custom-scrollbar::-webkit-scrollbar { width: 5px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
 
         .media-scroller { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 15px; }
-        .media-card { flex: 0 0 85%; max-width: 400px; aspect-ratio: 16/10; border-radius: 16px; overflow: hidden; background: #f1f5f9; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+        .media-card { flex: 0 0 85%; max-width: 400px; aspect-ratio: 16/10; border-radius: 16px; overflow: hidden; background: #f1f5f9; }
         .media-card img { width: 100%; height: 100%; object-fit: cover; }
 
         .privacy-badge { font-size: 10px; padding: 3px 10px; border-radius: 20px; font-weight: 800; text-transform: uppercase; }
@@ -126,7 +82,7 @@
         .badge-private { background: #eef2ff; color: #6366f1; }
 
         .nav-active { background-color: #6366f1 !important; color: white !important; }
-        .toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); padding: 12px 24px; background: #1e293b; color: white; border-radius: 12px; z-index: 9999; display: none; font-size: 14px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+        .toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); padding: 12px 24px; background: #1e293b; color: white; border-radius: 12px; z-index: 9999; display: none; font-size: 14px; }
     </style>
 </head>
 <body>
@@ -134,18 +90,22 @@
     <div id="toast" class="toast">訊息提示</div>
 
     <div id="app-container">
-        <!-- 側邊欄：地圖與導覽 -->
+        <!-- 側邊欄 -->
         <div class="sidebar-admin">
             <header class="layer-1">
                 <div class="flex items-center justify-between w-full">
-                    <div id="userProfile" class="flex items-center gap-3">
-                        <div class="w-9 h-9 rounded-xl bg-slate-700 flex items-center justify-center text-white overflow-hidden shadow-inner">
+                    <!-- 點擊頭像區塊進行登入/登出 -->
+                    <div id="userProfile" onclick="handleAuthClick()" class="flex items-center gap-3 cursor-pointer group">
+                        <div id="userAvatar" class="w-10 h-10 rounded-xl bg-slate-700 flex items-center justify-center text-white overflow-hidden shadow-inner group-hover:ring-2 group-hover:ring-indigo-400 transition-all">
                             <i class="fa-solid fa-user"></i>
                         </div>
-                        <h1 class="text-white font-black text-sm tracking-wide">我的足跡</h1>
+                        <div class="flex flex-col">
+                            <h1 id="userName" class="text-white font-black text-sm tracking-wide">訪客身分</h1>
+                            <span id="authStatusLabel" class="text-[9px] text-slate-400 font-bold uppercase tracking-tighter">點擊登入</span>
+                        </div>
                     </div>
-                    <button id="addBtn" onclick="addNewLocation()" class="hidden w-9 h-9 bg-indigo-500 text-white rounded-xl items-center justify-center shadow-lg active:scale-95 transition-all">
-                        <i class="fa-solid fa-plus text-xs"></i>
+                    <button id="addBtn" onclick="addNewLocation()" class="hidden w-10 h-10 bg-indigo-500 text-white rounded-xl items-center justify-center shadow-lg active:scale-95 transition-all">
+                        <i class="fa-solid fa-plus"></i>
                     </button>
                 </div>
             </header>
@@ -157,22 +117,22 @@
             <section class="layer-3">
                 <div class="p-4 flex gap-2 shrink-0 bg-white border-b border-slate-50">
                     <button onclick="switchViewMode('public')" id="btnPublic" class="flex-1 py-2.5 rounded-xl text-[11px] font-black transition-all nav-active">公開展區</button>
-                    <button onclick="switchViewMode('private')" id="btnPrivate" class="hidden flex-1 py-2.5 rounded-xl text-[11px] font-black text-slate-400 bg-slate-50 border border-slate-100 transition-all">管理後台</button>
+                    <button onclick="switchViewMode('private')" id="btnPrivate" class="hidden flex-1 py-2.5 rounded-xl text-[11px] font-black text-slate-400 bg-slate-50 border border-slate-100 transition-all">我的管理後台</button>
                 </div>
                 <div id="locationScroller" class="flex-1 custom-scrollbar bg-white">
-                    <!-- 地點列表將在此生成 -->
+                    <!-- 清單 -->
                 </div>
             </section>
         </div>
 
-        <!-- 內容視圖：詳細故事 (手機版位於下方) -->
+        <!-- 內容視圖 -->
         <div id="contentView" class="main-content-view custom-scrollbar">
-            <div id="emptyContent" class="h-full min-h-[50vh] flex flex-col items-center justify-center text-slate-300 p-10 text-center">
+            <div id="emptyContent" class="h-full min-h-[60vh] flex flex-col items-center justify-center text-slate-300 p-10 text-center">
                 <div class="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-6">
                     <i class="fa-solid fa-map-location-dot text-4xl opacity-20"></i>
                 </div>
-                <h3 class="text-slate-900 font-black text-lg">選擇一個地點開始探索</h3>
-                <p class="text-slate-400 text-sm mt-2">點擊左側清單或地圖上的標記</p>
+                <h3 class="text-slate-900 font-black text-lg">探索足跡故事</h3>
+                <p class="text-slate-400 text-sm mt-2">請從左側清單選擇地點或點擊地圖標記</p>
             </div>
 
             <div id="mainContent" class="hidden">
@@ -192,9 +152,7 @@
                         </div>
                     </div>
 
-                    <div id="cMedia" class="media-scroller custom-scrollbar">
-                        <!-- 圖片將在此生成 -->
-                    </div>
+                    <div id="cMedia" class="media-scroller custom-scrollbar"></div>
 
                     <div class="prose prose-slate max-w-none">
                         <p id="cDesc" class="text-slate-600 text-xl leading-relaxed whitespace-pre-wrap font-medium"></p>
@@ -202,33 +160,22 @@
                 </div>
             </div>
 
-            <!-- 編輯模式介面 -->
+            <!-- 編輯模式 -->
             <div id="editMode" class="hidden content-padding p-8 md:p-20 bg-slate-50 min-h-full">
                 <div class="max-w-2xl mx-auto space-y-8 bg-white p-8 md:p-12 rounded-[2.5rem] shadow-xl border border-white">
                     <div class="flex items-center gap-4">
                         <div class="w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center">
                             <i class="fa-solid fa-edit"></i>
                         </div>
-                        <h3 class="text-2xl font-black text-slate-900">編輯足跡</h3>
+                        <h3 class="text-2xl font-black text-slate-900">編輯內容</h3>
                     </div>
-                    
                     <div class="space-y-5">
-                        <div class="space-y-2">
-                            <label class="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">目的地</label>
-                            <input type="text" id="eTitle" class="w-full p-5 rounded-2xl border border-slate-100 bg-slate-50 focus:bg-white focus:ring-4 focus:ring-indigo-50 outline-none font-bold transition-all" placeholder="輸入地點名稱">
-                        </div>
-                        <div class="space-y-2">
-                            <label class="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">旅行日期</label>
-                            <input type="date" id="eDate" class="w-full p-5 rounded-2xl border border-slate-100 bg-slate-50 focus:bg-white focus:ring-4 focus:ring-indigo-50 outline-none font-bold transition-all">
-                        </div>
-                        <div class="space-y-2">
-                            <label class="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">旅行故事</label>
-                            <textarea id="eDesc" rows="8" class="w-full p-5 rounded-2xl border border-slate-100 bg-slate-50 focus:bg-white focus:ring-4 focus:ring-indigo-50 outline-none font-medium transition-all" placeholder="分享當時的心情與故事..."></textarea>
-                        </div>
+                        <input type="text" id="eTitle" class="w-full p-5 rounded-2xl border border-slate-100 bg-slate-50 outline-none font-bold focus:bg-white" placeholder="地點名稱">
+                        <input type="date" id="eDate" class="w-full p-5 rounded-2xl border border-slate-100 bg-slate-50 outline-none font-bold focus:bg-white">
+                        <textarea id="eDesc" rows="8" class="w-full p-5 rounded-2xl border border-slate-100 bg-slate-50 outline-none font-medium focus:bg-white" placeholder="在這裡寫下故事..."></textarea>
                     </div>
-                    
-                    <div class="flex gap-4 pt-4">
-                        <button onclick="saveChanges()" class="flex-[2] py-5 bg-indigo-600 text-white font-black rounded-2xl shadow-lg shadow-indigo-200 active:scale-95 transition-all">儲存變更</button>
+                    <div class="flex gap-4">
+                        <button onclick="saveChanges()" class="flex-[2] py-5 bg-indigo-600 text-white font-black rounded-2xl shadow-lg active:scale-95 transition-all">更新資料</button>
                         <button onclick="toggleEditMode()" class="flex-1 py-5 bg-slate-100 text-slate-500 font-bold rounded-2xl active:scale-95 transition-all">取消</button>
                     </div>
                 </div>
@@ -238,10 +185,9 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, doc, setDoc, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // Firebase 配置 (與前版本一致)
         const firebaseConfig = {
             apiKey: "AIzaSyBFBhaRtjzBcav9dI7TfNt0E2ZjjUW1b28",
             authDomain: "mytraveljournal-74571.firebaseapp.com",
@@ -252,6 +198,7 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
+        const provider = new GoogleAuthProvider();
         const appId = 'mytraveljournal-74571';
 
         let locations = [];
@@ -260,40 +207,54 @@
         let viewMode = 'public';
         let unsub = null;
 
-        // 初始化地圖
         function initMap() {
             map = L.map('map', { center: [22.3193, 114.1694], zoom: 12, zoomControl: false });
             L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png').addTo(map);
             markersLayer = L.layerGroup().addTo(map);
         }
 
-        // 監聽登錄狀態
+        // 登入處理
+        window.handleAuthClick = () => {
+            if (auth.currentUser) {
+                if(confirm("確定要登出嗎？")) signOut(auth);
+            } else {
+                signInWithPopup(auth, provider).then(() => showToast("歡迎回來！")).catch(e => console.error(e));
+            }
+        };
+
         onAuthStateChanged(auth, (user) => {
-            const profile = document.getElementById('userProfile');
+            const avatar = document.getElementById('userAvatar');
+            const name = document.getElementById('userName');
+            const label = document.getElementById('authStatusLabel');
+            const btnPrivate = document.getElementById('btnPrivate');
+
             if (user) {
-                profile.querySelector('div').innerHTML = `<img src="${user.photoURL}" class="w-full h-full object-cover">`;
+                avatar.innerHTML = `<img src="${user.photoURL}" class="w-full h-full object-cover">`;
+                name.innerText = user.displayName;
+                label.innerText = "已登入 (點擊登出)";
+                btnPrivate.style.display = 'flex';
                 switchViewMode('private');
             } else {
-                profile.querySelector('div').innerHTML = `<i class="fa-solid fa-user"></i>`;
+                avatar.innerHTML = `<i class="fa-solid fa-user"></i>`;
+                name.innerText = "訪客身分";
+                label.innerText = "點擊登入管理";
+                btnPrivate.style.display = 'none';
                 switchViewMode('public');
             }
         });
 
-        // 切換顯示模式 (公開 vs 管理)
         window.switchViewMode = (mode) => {
             viewMode = mode;
             const isPub = mode === 'public';
             document.getElementById('btnPublic').className = isPub ? 'flex-1 py-2.5 rounded-xl text-[11px] font-black transition-all nav-active' : 'flex-1 py-2.5 rounded-xl text-[11px] font-black text-slate-400 bg-slate-50 border border-slate-100';
             document.getElementById('btnPrivate').className = !isPub ? 'flex-1 py-2.5 rounded-xl text-[11px] font-black nav-active' : 'flex-1 py-2.5 rounded-xl text-[11px] font-black text-slate-400 bg-slate-50 border border-slate-100';
             document.getElementById('addBtn').style.display = (!isPub && auth.currentUser) ? 'flex' : 'none';
-            document.getElementById('btnPrivate').style.display = auth.currentUser ? 'flex' : 'none';
             loadData();
         };
 
-        // 從 Firestore 加載數據
         async function loadData() {
             if (unsub) unsub();
-            let ref = viewMode === 'public' 
+            let ref = (viewMode === 'public' || !auth.currentUser)
                 ? collection(db, 'artifacts', appId, 'public', 'data', 'locations')
                 : collection(db, 'artifacts', appId, 'users', auth.currentUser.uid, 'locations');
 
@@ -303,10 +264,9 @@
                 locations.sort((a, b) => (b.date || "").localeCompare(a.date || ""));
                 renderList(); 
                 updateMarkers();
-            }, (err) => console.error("Firestore Error:", err));
+            });
         }
 
-        // 渲染地點清單
         function renderList() {
             const container = document.getElementById('locationScroller');
             container.innerHTML = '';
@@ -320,13 +280,11 @@
             });
         }
 
-        // 選擇地點後的處理邏輯 (含自動捲動)
         window.selectLoc = (id) => {
             currentId = id;
             const loc = locations.find(l => l.id === id);
             if (!loc) return;
 
-            // UI 切換
             document.getElementById('emptyContent').classList.add('hidden');
             document.getElementById('mainContent').classList.remove('hidden');
             document.getElementById('editMode').classList.add('hidden');
@@ -334,13 +292,12 @@
             const isAdmin = auth.currentUser && (viewMode === 'private');
             document.getElementById('adminTools').style.display = isAdmin ? 'flex' : 'none';
 
-            // 填充內容
             document.getElementById('cTitle').innerText = loc.title;
             document.getElementById('cDate').innerText = loc.date || "日期未註記";
-            document.getElementById('cDesc').innerText = loc.description || "這裡還沒有寫下故事...";
+            document.getElementById('cDesc').innerText = loc.description || "分享一段美好的回憶吧...";
             
             const badge = document.getElementById('cBadge');
-            badge.innerText = loc.isPublic ? "公開分享" : "私人管理";
+            badge.innerText = loc.isPublic ? "公開足跡" : "私人收藏";
             badge.className = `privacy-badge ${loc.isPublic ? 'badge-public' : 'badge-private'}`;
 
             const mediaBox = document.getElementById('cMedia');
@@ -351,41 +308,30 @@
                 mediaBox.appendChild(card);
             });
 
-            // 地圖互動
-            map.flyTo([loc.lat, loc.lng], 14, { animate: true, duration: 1.5 });
+            map.flyTo([loc.lat, loc.lng], 14);
             renderList(); 
             updateMarkers();
 
-            // --- 自動平滑捲動邏輯 ---
+            // 手機版平滑捲動
             if (window.innerWidth <= 768) {
-                // 手機版：捲動整個頁面到內容視圖
-                const contentElement = document.getElementById('contentView');
-                contentElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                document.getElementById('contentView').scrollIntoView({ behavior: 'smooth' });
             } else {
-                // 電腦版：重置右側視窗的捲動位置
                 document.getElementById('contentView').scrollTop = 0;
             }
         };
 
-        // 更新地圖標記
         function updateMarkers() {
             markersLayer.clearLayers();
             locations.forEach(loc => {
                 const isActive = currentId === loc.id;
                 const icon = L.divIcon({
-                    html: `
-                        <div class="relative flex items-center justify-center">
-                            <div class="absolute w-8 h-8 ${isActive ? 'bg-indigo-500 opacity-20' : 'bg-rose-500 opacity-10'} rounded-full animate-ping"></div>
-                            <i class="fa-solid fa-location-dot ${isActive ? 'text-indigo-600 scale-125' : 'text-rose-500'} text-2xl transition-all shadow-sm"></i>
-                        </div>
-                    `,
+                    html: `<i class="fa-solid fa-location-dot ${isActive ? 'text-indigo-600 scale-125' : 'text-rose-500'} text-2xl transition-all"></i>`,
                     className: '', iconAnchor: [12, 24]
                 });
                 L.marker([loc.lat, loc.lng], { icon }).addTo(markersLayer).on('click', () => selectLoc(loc.id));
             });
         }
 
-        // 編輯模式切換
         window.toggleEditMode = () => {
             const main = document.getElementById('mainContent');
             const edit = document.getElementById('editMode');
@@ -401,7 +347,6 @@
             }
         };
 
-        // 儲存編輯
         window.saveChanges = async () => {
             const data = {
                 title: document.getElementById('eTitle').value,
@@ -411,17 +356,15 @@
             };
             try {
                 await setDoc(doc(db, 'artifacts', appId, 'users', auth.currentUser.uid, 'locations', currentId), data, {merge:true});
-                showToast("變更已成功儲存"); 
+                showToast("更新成功"); 
                 toggleEditMode();
             } catch (e) {
-                showToast("儲存失敗，請重試");
+                showToast("更新失敗");
             }
         };
 
         function showToast(m) { 
-            const t = document.getElementById('toast'); 
-            t.innerText = m; 
-            t.style.display = 'block'; 
+            const t = document.getElementById('toast'); t.innerText = m; t.style.display = 'block'; 
             setTimeout(() => t.style.display = 'none', 3000); 
         }
 
