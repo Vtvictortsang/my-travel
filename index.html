@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>我的旅遊足跡 - 縮圖回歸版</title>
+    <title>VIC 足跡 - 記憶分享平台</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -37,7 +37,7 @@
             background: #f8fafc; padding: 16px; border-radius: 16px;
             border: 1px solid #e2e8f0; margin-bottom: 12px;
         }
-        /* 列表縮圖樣式 */
+        /* 列表樣式 */
         .list-thumb {
             width: 48px; height: 48px; border-radius: 10px;
             object-fit: cover; background: #e2e8f0; flex-shrink: 0;
@@ -47,6 +47,27 @@
             background: #f1f5f9; display: flex; items-center; justify-center;
             color: #cbd5e1; flex-shrink: 0;
         }
+        .month-header {
+            background: #f1f5f9;
+            padding: 8px 12px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #64748b;
+            border-radius: 8px;
+            margin: 8px 0 4px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+        }
+        .month-header:hover { background: #e2e8f0; }
+        
+        .content-link {
+            color: #4f46e5;
+            text-decoration: underline;
+            word-break: break-all;
+        }
+        .content-link:hover { color: #4338ca; }
     </style>
 </head>
 <body class="h-screen flex flex-col md:flex-row overflow-hidden">
@@ -56,12 +77,14 @@
     <!-- 左側欄 -->
     <aside class="w-full md:w-80 bg-white border-b md:border-b-0 md:border-r border-slate-200 flex flex-col h-[30vh] md:h-full z-10 shadow-sm shrink-0">
         <div class="p-4 bg-indigo-600 text-white flex justify-between items-center shrink-0">
-            <h1 class="font-bold text-lg"><i class="fa-solid fa-earth-asia mr-2"></i>旅遊足跡</h1>
+            <h1 class="font-bold text-lg"><i class="fa-solid fa-earth-asia mr-2"></i>VIC 足跡</h1>
             <button onclick="addNewLocation()" class="p-2 bg-indigo-500 hover:bg-indigo-400 rounded-lg">
-                <i class="fa-solid fa-plus"></i>
+                <i class="fa-solid fa-plus text-sm"></i> 新增足跡
             </button>
         </div>
-        <div id="locationList" class="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-2"></div>
+        <div id="locationList" class="flex-1 overflow-y-auto custom-scrollbar p-2">
+            <!-- 這裡會由 JS 生成分組列表 -->
+        </div>
     </aside>
 
     <!-- 右側欄 -->
@@ -73,16 +96,18 @@
         <div class="h-2/3 overflow-y-auto custom-scrollbar p-4 md:p-8">
             <div id="emptyState" class="flex flex-col items-center justify-center h-full text-slate-300">
                 <i class="fa-solid fa-map-location text-6xl mb-4 opacity-20"></i>
-                <p>選擇地點來開啟或編輯回憶</p>
+                <p>選擇左側足跡或點擊地圖開始回憶</p>
             </div>
 
             <div id="contentView" class="hidden max-w-6xl mx-auto space-y-8">
                 <div id="displaySection" class="space-y-6">
                     <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                        <h2 id="displayTitle" class="text-4xl font-black text-slate-800"></h2>
+                        <div>
+                            <p id="displayDate" class="text-indigo-500 font-bold text-sm mb-1"></p>
+                            <h2 id="displayTitle" class="text-4xl font-black text-slate-800"></h2>
+                        </div>
                         <div class="flex space-x-2">
-                            <button onclick="toggleEditMode()" class="px-5 py-2.5 bg-white border border-slate-200 rounded-xl shadow-sm font-medium">編輯內容</button>
-                            <button onclick="deleteCurrentLocation()" class="p-2.5 bg-red-50 text-red-500 rounded-xl"><i class="fa-solid fa-trash-can"></i></button>
+                            <button onclick="toggleEditMode()" class="px-8 py-2.5 bg-white border border-slate-200 rounded-xl shadow-sm font-bold text-indigo-600 hover:bg-slate-50 transition-colors">編輯內容</button>
                         </div>
                     </div>
                     <div id="mediaGallery" class="media-grid"></div>
@@ -93,37 +118,41 @@
                 </div>
 
                 <div id="editForm" class="hidden bg-white rounded-3xl shadow-xl p-6 md:p-10 space-y-8">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        <div class="space-y-3">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="md:col-span-1 space-y-3">
+                            <label class="block text-sm font-bold">日期</label>
+                            <input type="date" id="editDateInput" class="w-full p-4 border border-slate-200 rounded-2xl outline-none focus:border-indigo-500 transition-colors">
+                        </div>
+                        <div class="md:col-span-2 space-y-3">
                             <label class="block text-sm font-bold">地點名稱</label>
-                            <input type="text" id="editTitleInput" class="w-full p-4 border border-slate-200 rounded-2xl outline-none" placeholder="輸入地點...">
+                            <input type="text" id="editTitleInput" class="w-full p-4 border border-slate-200 rounded-2xl outline-none focus:border-indigo-500 transition-colors" placeholder="輸入地點...">
                         </div>
-                        <div class="space-y-3">
-                            <label class="block text-sm font-bold">座標定位</label>
-                            <div id="coordDisplay" class="w-full p-4 bg-slate-50 border border-slate-100 text-slate-500 rounded-2xl font-mono text-sm">點擊地圖選取位置</div>
-                        </div>
+                    </div>
+                    
+                    <div class="space-y-3">
+                        <label class="block text-sm font-bold">座標定位 (可點擊上方地圖更改)</label>
+                        <div id="coordDisplay" class="w-full p-4 bg-slate-50 border border-slate-100 text-slate-500 rounded-2xl font-mono text-sm"></div>
                     </div>
 
                     <div class="space-y-4">
                         <div class="flex justify-between items-center">
-                            <label class="block text-sm font-bold">媒體連結 (支援 Google Drive 分享連結)</label>
+                            <label class="block text-sm font-bold">媒體連結</label>
                             <div class="flex gap-2">
-                                <button onclick="addMediaInput('image')" class="bg-indigo-50 text-indigo-700 px-4 py-2 rounded-xl font-bold text-xs">加入相片網址</button>
-                                <button onclick="addMediaInput('video')" class="bg-amber-50 text-amber-700 px-4 py-2 rounded-xl font-bold text-xs">加入影片網址</button>
+                                <button onclick="addMediaInput('image')" class="bg-indigo-50 text-indigo-700 px-4 py-2 rounded-xl font-bold text-xs hover:bg-indigo-100">+ 相片</button>
+                                <button onclick="addMediaInput('video')" class="bg-amber-50 text-amber-700 px-4 py-2 rounded-xl font-bold text-xs hover:bg-amber-100">+ 影片</button>
                             </div>
                         </div>
                         <div id="mediaInputsContainer" class="space-y-3"></div>
-                        <p class="text-[10px] text-slate-400">※ Google Drive 影片請確保設為「知道連結的任何人皆可查看」。</p>
                     </div>
 
                     <div class="space-y-3">
-                        <label class="block text-sm font-bold">故事內容</label>
-                        <textarea id="editDescInput" rows="6" class="w-full p-4 border border-slate-200 rounded-2xl outline-none" placeholder="寫下回憶..."></textarea>
+                        <label class="block text-sm font-bold">故事內容 (支援網址連結)</label>
+                        <textarea id="editDescInput" rows="6" class="w-full p-4 border border-slate-200 rounded-2xl outline-none focus:border-indigo-500 transition-colors" placeholder="寫下回憶..."></textarea>
                     </div>
                     
                     <div class="flex gap-4 pt-4">
-                        <button id="saveBtn" onclick="saveChanges()" class="flex-[2] bg-indigo-600 text-white font-black py-4 rounded-2xl shadow-lg">儲存足跡</button>
-                        <button onclick="toggleEditMode()" class="flex-1 py-4 bg-slate-100 text-slate-600 font-bold rounded-2xl">放棄</button>
+                        <button id="saveBtn" onclick="saveChanges()" class="flex-[2] bg-indigo-600 text-white font-black py-4 rounded-2xl shadow-lg hover:bg-indigo-700 transition-all">儲存足跡</button>
+                        <button onclick="toggleEditMode()" class="flex-1 py-4 bg-slate-100 text-slate-600 font-bold rounded-2xl hover:bg-slate-200 transition-all">放棄</button>
                     </div>
                 </div>
             </div>
@@ -134,7 +163,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, doc, setDoc, addDoc, deleteDoc, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, doc, setDoc, addDoc, deleteDoc, onSnapshot, serverTimestamp, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyBFBhaRtjzBcav9dI7TfNt0E2ZjjUW1b28",
@@ -153,17 +182,18 @@
         let locations = [];
         let currentId = null;
         let map, markersLayer, tempMarker;
+        let collapsedMonths = new Set(); // 記錄摺疊狀態
 
-        // 自動轉換 Google Drive 連結
+        function linkify(text) {
+            if (!text) return "";
+            const urlPattern = /(\b(https?|ftp|file):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/ig;
+            return text.replace(urlPattern, url => `<a href="${url}" target="_blank" rel="noopener noreferrer" class="content-link">${url}</a>`);
+        }
+
         function convertDriveUrl(url) {
-            if (!url) return "";
-            if (url.includes("drive.google.com")) {
-                const match = url.match(/\/file\/d\/(.+?)\/(view|edit)/) || url.match(/id=(.+?)(&|$)/);
-                if (match && match[1]) {
-                    return `https://drive.google.com/uc?export=download&id=${match[1]}`;
-                }
-            }
-            return url;
+            if (!url || !url.includes("drive.google.com")) return url;
+            const match = url.match(/\/file\/d\/(.+?)\/(view|edit)/) || url.match(/id=(.+?)(&|$)/);
+            return match ? `https://drive.google.com/uc?export=download&id=${match[1]}` : url;
         }
 
         function initMap() {
@@ -175,7 +205,7 @@
             });
         }
 
-        window.addMediaInput = function(type, val = '') {
+        window.addMediaInput = (type, val = '') => {
             const container = document.getElementById('mediaInputsContainer');
             const div = document.createElement('div');
             div.className = 'image-input-group flex items-center gap-3';
@@ -184,8 +214,7 @@
                 <div class="w-10 h-10 flex items-center justify-center bg-white rounded-xl shadow-sm shrink-0">
                     <i class="fa-solid ${type === 'image' ? 'fa-image text-indigo-500' : 'fa-video text-amber-500'}"></i>
                 </div>
-                <input type="text" class="media-url-input flex-1 p-3 border border-slate-200 rounded-xl text-xs" 
-                       placeholder="貼上網址..." value="${val}">
+                <input type="text" class="media-url-input flex-1 p-3 border border-slate-200 rounded-xl text-xs" placeholder="連結..." value="${val}">
                 <button onclick="this.parentElement.remove()" class="p-2 text-slate-300 hover:text-red-500"><i class="fa-solid fa-trash-can"></i></button>
             `;
             container.appendChild(div);
@@ -197,10 +226,12 @@
             setTimeout(() => t.style.display = 'none', 3000);
         }
 
-        onAuthStateChanged(auth, (user) => {
+        onAuthStateChanged(auth, user => {
             if (user) {
                 onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'locations'), (snap) => {
                     locations = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                    // 排序：按日期由新到舊
+                    locations.sort((a, b) => (b.date || "").localeCompare(a.date || ""));
                     renderList();
                     updateMarkers();
                     if (currentId) selectLoc(currentId, false);
@@ -208,37 +239,78 @@
             } else signInAnonymously(auth);
         });
 
-        // 更新列表渲染：加入縮圖邏輯
         function renderList() {
             const list = document.getElementById('locationList');
-            list.innerHTML = locations.length ? '' : '<div class="p-8 text-center text-slate-400 text-sm">無紀錄</div>';
-            
-            locations.forEach(loc => {
-                const isActive = currentId === loc.id;
-                const div = document.createElement('div');
-                div.className = `p-3 cursor-pointer rounded-2xl flex items-center gap-3 transition-all ${isActive ? 'bg-indigo-600 text-white shadow-lg' : 'hover:bg-slate-50 text-slate-600'}`;
-                
-                // 決定縮圖內容
-                let thumbHtml = `<div class="list-icon-placeholder"><i class="fa-solid fa-location-dot"></i></div>`;
-                if (loc.media && loc.media.length > 0) {
-                    const firstMedia = loc.media[0];
-                    if (firstMedia.type === 'image') {
-                        thumbHtml = `<img src="${convertDriveUrl(firstMedia.url)}" class="list-thumb" onerror="this.outerHTML='<div class=list-icon-placeholder><i class=\'fa-solid fa-image\'></i></div>'">`;
-                    } else {
-                        // 影片縮圖暫時以圖標代替
-                        thumbHtml = `<div class="list-icon-placeholder" style="background:#fff1f2"><i class="fa-solid fa-circle-play text-rose-400"></i></div>`;
-                    }
-                }
+            list.innerHTML = '';
+            if (!locations.length) {
+                list.innerHTML = '<div class="p-8 text-center text-slate-400 text-sm">無紀錄</div>';
+                return;
+            }
 
-                div.innerHTML = `
-                    ${thumbHtml}
-                    <div class="flex-1 min-w-0">
-                        <p class="font-bold truncate text-sm">${loc.title || '未命名'}</p>
-                        <p class="text-[10px] opacity-60 truncate">${loc.description?.substring(0, 20) || '點擊查看回憶'}</p>
+            // 按年月分組
+            const groups = {};
+            locations.forEach(loc => {
+                const date = loc.date || "未分類";
+                const monthKey = date.length >= 7 ? date.substring(0, 7) : "未分類"; // YYYY-MM
+                if (!groups[monthKey]) groups[monthKey] = [];
+                groups[monthKey].push(loc);
+            });
+
+            // 取得排序後的月份 Key
+            const sortedMonthKeys = Object.keys(groups).sort((a, b) => b.localeCompare(a));
+
+            sortedMonthKeys.forEach(monthKey => {
+                const displayMonth = monthKey === "未分類" ? "未分類" : monthKey.replace('-', '年') + '月';
+                const groupContainer = document.createElement('div');
+                const isCollapsed = collapsedMonths.has(monthKey);
+
+                // 月份標題
+                const header = document.createElement('div');
+                header.className = 'month-header';
+                header.innerHTML = `
+                    <span>${displayMonth}</span>
+                    <div class="flex items-center gap-2">
+                        <span class="bg-slate-200 text-slate-500 px-2 py-0.5 rounded-full text-[10px]">${groups[monthKey].length}</span>
+                        <i class="fa-solid ${isCollapsed ? 'fa-chevron-right' : 'fa-chevron-down'} text-[10px]"></i>
                     </div>
                 `;
-                div.onclick = () => selectLoc(loc.id);
-                list.appendChild(div);
+                header.onclick = () => {
+                    if (isCollapsed) collapsedMonths.delete(monthKey);
+                    else collapsedMonths.add(monthKey);
+                    renderList();
+                };
+                groupContainer.appendChild(header);
+
+                // 足跡項目容器
+                if (!isCollapsed) {
+                    const itemsDiv = document.createElement('div');
+                    itemsDiv.className = 'space-y-1 mt-1';
+                    groups[monthKey].forEach(loc => {
+                        const isActive = currentId === loc.id;
+                        const item = document.createElement('div');
+                        item.className = `p-2 cursor-pointer rounded-xl flex items-center gap-3 transition-all ${isActive ? 'bg-indigo-600 text-white shadow-md' : 'hover:bg-slate-50 text-slate-600'}`;
+                        
+                        let thumbHtml = `<div class="list-icon-placeholder"><i class="fa-solid fa-location-dot"></i></div>`;
+                        if (loc.media?.length) {
+                            const first = loc.media[0];
+                            if (first.type === 'image') thumbHtml = `<img src="${convertDriveUrl(first.url)}" class="list-thumb" onerror="this.outerHTML='<div class=list-icon-placeholder><i class=\'fa-solid fa-image\'></i></div>'">`;
+                            else thumbHtml = `<div class="list-icon-placeholder" style="background:#fff1f2"><i class="fa-solid fa-circle-play text-rose-400"></i></div>`;
+                        }
+
+                        item.innerHTML = `
+                            ${thumbHtml}
+                            <div class="flex-1 min-w-0">
+                                <p class="font-bold truncate text-xs">${loc.title || '未命名'}</p>
+                                <p class="text-[9px] opacity-60 truncate">${loc.date?.split('-')[2] ? loc.date.split('-')[2]+'日' : ''} ${loc.description?.substring(0, 15) || ''}</p>
+                            </div>
+                        `;
+                        item.onclick = (e) => { e.stopPropagation(); selectLoc(loc.id); };
+                        itemsDiv.appendChild(item);
+                    });
+                    groupContainer.appendChild(itemsDiv);
+                }
+
+                list.appendChild(groupContainer);
             });
         }
 
@@ -258,16 +330,20 @@
             });
         }
 
-        window.selectLoc = function(id, shouldFly = true) {
+        window.selectLoc = (id, shouldFly = true) => {
             currentId = id;
             const loc = locations.find(l => l.id === id);
             if (!loc) return;
+            
             document.getElementById('emptyState').classList.add('hidden');
             document.getElementById('contentView').classList.remove('hidden');
             document.getElementById('displaySection').classList.remove('hidden');
             document.getElementById('editForm').classList.add('hidden');
+            
             document.getElementById('displayTitle').innerText = loc.title;
-            document.getElementById('displayDescription').innerText = loc.description || "暫無故事...";
+            document.getElementById('displayDate').innerText = loc.date ? loc.date.replace(/-/g, ' / ') : "日期未定";
+            document.getElementById('displayDescription').innerHTML = loc.description ? linkify(loc.description) : "暫無故事...";
+            
             const gallery = document.getElementById('mediaGallery');
             gallery.innerHTML = '';
             if (loc.media) {
@@ -280,13 +356,14 @@
                     gallery.appendChild(container);
                 });
             }
-            if (shouldFly && loc.lat) map.flyTo([loc.lat, loc.lng], 10);
+            if (shouldFly && loc.lat) map.flyTo([loc.lat, loc.lng], 12);
             renderList(); updateMarkers();
         };
 
         window.addNewLocation = async () => {
+            const today = new Date().toISOString().split('T')[0];
             const docRef = await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'locations'), {
-                title: "新地點", description: "", media: [], lat: map.getCenter().lat, lng: map.getCenter().lng, createdAt: serverTimestamp()
+                title: "新地點", description: "", media: [], date: today, lat: map.getCenter().lat, lng: map.getCenter().lng, createdAt: serverTimestamp()
             });
             currentId = docRef.id;
             toggleEditMode();
@@ -299,6 +376,7 @@
             if (form.classList.contains('hidden')) {
                 form.classList.remove('hidden'); display.classList.add('hidden');
                 document.getElementById('editTitleInput').value = loc.title;
+                document.getElementById('editDateInput').value = loc.date || "";
                 document.getElementById('editDescInput').value = loc.description;
                 document.getElementById('mediaInputsContainer').innerHTML = '';
                 if (loc.media) loc.media.forEach(m => addMediaInput(m.type, m.url));
@@ -323,17 +401,16 @@
                 url: g.querySelector('.media-url-input').value.trim() 
             })).filter(m => m.url);
             
-            const data = { title: document.getElementById('editTitleInput').value || "未命名", description: document.getElementById('editDescInput').value, media: mediaList };
+            const data = { 
+                title: document.getElementById('editTitleInput').value || "未命名", 
+                date: document.getElementById('editDateInput').value,
+                description: document.getElementById('editDescInput').value, 
+                media: mediaList 
+            };
             if (tempMarker) { const p = tempMarker.getLatLng(); data.lat = p.lat; data.lng = p.lng; }
+            
             await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'locations', currentId), data, { merge: true });
             showToast("足跡已同步"); toggleEditMode(); btn.disabled = false;
-        };
-
-        window.deleteCurrentLocation = async () => {
-            if (confirm("確定刪除？")) {
-                await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'locations', currentId));
-                location.reload();
-            }
         };
 
         window.onload = initMap;
