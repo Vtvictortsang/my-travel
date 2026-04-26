@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>足跡管理者中心 - 響應式版</title>
+    <title>足跡管理者中心 - 響應式優化版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -17,19 +17,20 @@
             font-family: 'Noto Sans TC', sans-serif; 
             background-color: #f8fafc; 
             margin: 0; padding: 0;
-            height: 100vh; height: calc(var(--vh, 1vh) * 100);
+            /* 電腦版固定高度，手機版允許捲動 */
+            height: 100vh;
             overflow: hidden;
         }
 
-        /* --- 基礎佈局：預設為橫向分欄 (Desktop) --- */
+        /* --- 基礎佈局：Desktop 橫向分欄 --- */
         #app-container { 
             display: flex; 
             flex-direction: row; 
-            height: 100%; 
+            height: 100vh; 
             width: 100%; 
         }
 
-        /* 側邊欄樣式 */
+        /* 側邊欄 (管理與地圖) */
         .sidebar-admin { 
             width: 380px; 
             height: 100%; 
@@ -41,38 +42,47 @@
             flex-shrink: 0;
         }
 
-        /* 內容區樣式 */
+        /* 內容區 (詳細故事) */
         .main-content-view { 
             flex: 1; 
             height: 100%; 
             overflow-y: auto; 
             background: #fcfcfd; 
             position: relative;
-            -webkit-overflow-scrolling: touch;
+            scroll-behavior: smooth; /* 平滑捲動關鍵 */
         }
 
-        /* 手機版 (Portrait) 樣式覆蓋 */
+        /* --- 手機版 (Mobile) 樣式覆蓋 --- */
         @media (max-width: 768px) {
+            body { overflow-y: auto; height: auto; } /* 允許整頁捲動 */
+            
             #app-container { 
-                flex-direction: column; /* 改為直向排版 */
-                overflow-y: auto;
+                flex-direction: column; 
+                height: auto; 
             }
+            
             .sidebar-admin { 
                 width: 100%; 
-                height: 50vh; /* 地圖與列表佔據上半部 */
+                height: 90vh; /* 地圖與清單佔據手機第一屏的大部分 */
                 border-right: none;
                 border-bottom: 1px solid #e2e8f0;
             }
+
             .main-content-view { 
                 width: 100%;
                 height: auto;
-                min-height: 50vh; /* 內容佔據下半部 */
+                min-height: 100vh; /* 內容區作為第二屏出現 */
+                background: white;
             }
-            .layer-2 { height: 200px !important; } /* 手機地圖縮小一點 */
-            .p-16 { padding: 2rem !important; } /* 手機內容間距縮小 */
-            #cTitle { font-size: 2.5rem !important; }
+
+            .layer-2 { height: 35vh !important; } /* 手機地圖高度 */
+            
+            /* 手機版內容間距優化 */
+            .content-padding { padding: 2.5rem 1.5rem !important; }
+            #cTitle { font-size: 2.2rem !important; line-height: 1.2; }
         }
 
+        /* 其他元件樣式 */
         .layer-1 { height: 70px; background: #1e293b; display: flex; align-items: center; padding: 0 1.25rem; z-index: 50; flex-shrink: 0; }
         .layer-2 { height: 280px; position: relative; background: #e2e8f0; flex-shrink: 0; }
         .layer-3 { flex: 1; background: #ffffff; display: flex; flex-direction: column; overflow: hidden; }
@@ -81,7 +91,7 @@
             flex-direction: column; 
             overflow-y: auto; 
             padding: 1rem;
-            gap: 10px;
+            gap: 12px;
             display: flex;
         }
 
@@ -90,15 +100,17 @@
             display: flex; 
             flex-direction: row;
             align-items: center; 
-            padding: 10px;
+            padding: 12px;
             background: #fff;
             border-radius: 12px;
             border: 1px solid #f1f5f9;
             cursor: pointer;
+            transition: all 0.2s ease;
         }
-        .loc-thumb { width: 44px; height: 44px; border-radius: 8px; object-fit: cover; }
-        .loc-item p { font-size: 14px; margin: 0 0 0 10px; font-weight: 700; color: #334155; }
-        .loc-active { background-color: #f0f3ff !important; border-color: #6366f1 !important; }
+        .loc-item:hover { border-color: #cbd5e1; }
+        .loc-thumb { width: 48px; height: 48px; border-radius: 8px; object-fit: cover; background: #f1f5f9; }
+        .loc-item p { font-size: 15px; margin: 0 0 0 12px; font-weight: 700; color: #334155; }
+        .loc-active { background-color: #f0f3ff !important; border-color: #6366f1 !important; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.1); }
 
         #map { height: 100%; width: 100%; }
 
@@ -106,35 +118,33 @@
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
 
         .media-scroller { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 15px; }
-        .media-card { flex: 0 0 85%; aspect-ratio: 16/10; border-radius: 16px; overflow: hidden; background: #f1f5f9; }
+        .media-card { flex: 0 0 85%; max-width: 400px; aspect-ratio: 16/10; border-radius: 16px; overflow: hidden; background: #f1f5f9; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
         .media-card img { width: 100%; height: 100%; object-fit: cover; }
 
-        .privacy-badge { font-size: 10px; padding: 2px 10px; border-radius: 20px; font-weight: 800; }
+        .privacy-badge { font-size: 10px; padding: 3px 10px; border-radius: 20px; font-weight: 800; text-transform: uppercase; }
         .badge-public { background: #ecfdf5; color: #10b981; }
         .badge-private { background: #eef2ff; color: #6366f1; }
 
         .nav-active { background-color: #6366f1 !important; color: white !important; }
-        .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); padding: 10px 20px; background: #1e293b; color: white; border-radius: 10px; z-index: 9999; display: none; font-size: 13px; }
+        .toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); padding: 12px 24px; background: #1e293b; color: white; border-radius: 12px; z-index: 9999; display: none; font-size: 14px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
     </style>
 </head>
 <body>
 
-    <div id="toast" class="toast">訊息</div>
+    <div id="toast" class="toast">訊息提示</div>
 
     <div id="app-container">
-        <!-- 側邊欄 (管理與地圖) -->
+        <!-- 側邊欄：地圖與導覽 -->
         <div class="sidebar-admin">
             <header class="layer-1">
                 <div class="flex items-center justify-between w-full">
-                    <div id="userProfile" class="flex items-center gap-3 cursor-pointer">
-                        <div class="w-8 h-8 rounded-lg bg-slate-700 flex items-center justify-center text-white overflow-hidden text-xs">
+                    <div id="userProfile" class="flex items-center gap-3">
+                        <div class="w-9 h-9 rounded-xl bg-slate-700 flex items-center justify-center text-white overflow-hidden shadow-inner">
                             <i class="fa-solid fa-user"></i>
                         </div>
-                        <div class="flex flex-col">
-                            <h1 class="text-white font-black text-xs tracking-tight">足跡管理者</h1>
-                        </div>
+                        <h1 class="text-white font-black text-sm tracking-wide">我的足跡</h1>
                     </div>
-                    <button id="addBtn" onclick="addNewLocation()" class="hidden w-8 h-8 bg-indigo-500 text-white rounded-lg items-center justify-center shadow-lg active:scale-90 transition-all">
+                    <button id="addBtn" onclick="addNewLocation()" class="hidden w-9 h-9 bg-indigo-500 text-white rounded-xl items-center justify-center shadow-lg active:scale-95 transition-all">
                         <i class="fa-solid fa-plus text-xs"></i>
                     </button>
                 </div>
@@ -145,55 +155,81 @@
             </section>
 
             <section class="layer-3">
-                <div class="p-3 flex gap-2 shrink-0 bg-white">
-                    <button onclick="switchViewMode('public')" id="btnPublic" class="flex-1 py-2 rounded-lg text-[10px] font-black transition-all nav-active">公開展區</button>
-                    <button onclick="switchViewMode('private')" id="btnPrivate" class="hidden flex-1 py-2 rounded-lg text-[10px] font-black text-slate-400 bg-slate-50 border border-slate-100 transition-all">我的管理</button>
+                <div class="p-4 flex gap-2 shrink-0 bg-white border-b border-slate-50">
+                    <button onclick="switchViewMode('public')" id="btnPublic" class="flex-1 py-2.5 rounded-xl text-[11px] font-black transition-all nav-active">公開展區</button>
+                    <button onclick="switchViewMode('private')" id="btnPrivate" class="hidden flex-1 py-2.5 rounded-xl text-[11px] font-black text-slate-400 bg-slate-50 border border-slate-100 transition-all">管理後台</button>
                 </div>
-                <div id="locationScroller" class="flex-1 custom-scrollbar bg-white"></div>
+                <div id="locationScroller" class="flex-1 custom-scrollbar bg-white">
+                    <!-- 地點列表將在此生成 -->
+                </div>
             </section>
         </div>
 
-        <!-- 主內容視圖 -->
-        <div class="main-content-view custom-scrollbar">
-            <div id="emptyContent" class="h-full min-h-[40vh] flex flex-col items-center justify-center text-slate-300 p-10 text-center">
-                <i class="fa-solid fa-map-location-dot text-4xl opacity-10 mb-4"></i>
-                <h3 class="text-slate-900 font-black text-base">請選擇足跡</h3>
+        <!-- 內容視圖：詳細故事 (手機版位於下方) -->
+        <div id="contentView" class="main-content-view custom-scrollbar">
+            <div id="emptyContent" class="h-full min-h-[50vh] flex flex-col items-center justify-center text-slate-300 p-10 text-center">
+                <div class="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-6">
+                    <i class="fa-solid fa-map-location-dot text-4xl opacity-20"></i>
+                </div>
+                <h3 class="text-slate-900 font-black text-lg">選擇一個地點開始探索</h3>
+                <p class="text-slate-400 text-sm mt-2">點擊左側清單或地圖上的標記</p>
             </div>
 
             <div id="mainContent" class="hidden">
-                <div class="p-8 md:p-16 space-y-8 max-w-4xl mx-auto">
-                    <div class="flex justify-between items-start border-b border-slate-100 pb-8">
-                        <div class="space-y-3">
-                            <div class="flex items-center gap-2">
-                                <span id="cDate" class="text-indigo-600 font-black text-[9px] tracking-widest bg-indigo-50 px-2 py-0.5 rounded-full"></span>
+                <div class="content-padding p-8 md:p-20 space-y-10 max-w-5xl mx-auto">
+                    <div class="flex justify-between items-start border-b border-slate-100 pb-10">
+                        <div class="space-y-4">
+                            <div class="flex items-center gap-3">
+                                <span id="cDate" class="text-indigo-600 font-black text-[10px] tracking-widest bg-indigo-50 px-3 py-1 rounded-full"></span>
                                 <span id="cBadge" class="privacy-badge"></span>
                             </div>
-                            <h2 id="cTitle" class="text-4xl md:text-6xl font-black text-slate-900 tracking-tighter"></h2>
+                            <h2 id="cTitle" class="text-4xl md:text-7xl font-black text-slate-900 tracking-tighter leading-tight"></h2>
                         </div>
                         <div id="adminTools" class="hidden flex gap-2">
-                            <button onclick="toggleEditMode()" class="w-10 h-10 bg-slate-100 text-slate-600 rounded-lg flex items-center justify-center"><i class="fa-solid fa-pen text-xs"></i></button>
+                            <button onclick="toggleEditMode()" class="w-12 h-12 bg-white shadow-sm border border-slate-100 text-slate-600 rounded-2xl flex items-center justify-center active:scale-90 transition-all">
+                                <i class="fa-solid fa-pen-to-square"></i>
+                            </button>
                         </div>
                     </div>
 
-                    <div id="cMedia" class="media-scroller custom-scrollbar"></div>
+                    <div id="cMedia" class="media-scroller custom-scrollbar">
+                        <!-- 圖片將在此生成 -->
+                    </div>
 
-                    <div class="space-y-6">
-                        <p id="cDesc" class="text-slate-600 text-lg leading-relaxed whitespace-pre-wrap"></p>
+                    <div class="prose prose-slate max-w-none">
+                        <p id="cDesc" class="text-slate-600 text-xl leading-relaxed whitespace-pre-wrap font-medium"></p>
                     </div>
                 </div>
             </div>
 
-            <!-- 編輯模式 (手機版會以全螢幕浮層感呈現) -->
-            <div id="editMode" class="hidden p-6 md:p-16 space-y-6 bg-slate-50 min-h-full">
-                <div class="max-w-xl mx-auto space-y-6 bg-white p-6 md:p-10 rounded-[2rem] shadow-sm">
-                    <h3 class="text-xl font-black text-slate-900">編輯內容</h3>
-                    <input type="text" id="eTitle" class="w-full p-4 rounded-xl border border-slate-100 bg-slate-50 focus:bg-white outline-none font-bold" placeholder="目的地">
-                    <input type="date" id="eDate" class="w-full p-4 rounded-xl border border-slate-100 bg-slate-50 focus:bg-white outline-none">
-                    <textarea id="eDesc" rows="5" class="w-full p-4 rounded-xl border border-slate-100 bg-slate-50 focus:bg-white outline-none" placeholder="描述內容..."></textarea>
+            <!-- 編輯模式介面 -->
+            <div id="editMode" class="hidden content-padding p-8 md:p-20 bg-slate-50 min-h-full">
+                <div class="max-w-2xl mx-auto space-y-8 bg-white p-8 md:p-12 rounded-[2.5rem] shadow-xl border border-white">
+                    <div class="flex items-center gap-4">
+                        <div class="w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center">
+                            <i class="fa-solid fa-edit"></i>
+                        </div>
+                        <h3 class="text-2xl font-black text-slate-900">編輯足跡</h3>
+                    </div>
                     
-                    <div class="flex gap-3">
-                        <button onclick="saveChanges()" class="flex-1 py-4 bg-indigo-600 text-white font-black rounded-xl">儲存</button>
-                        <button onclick="toggleEditMode()" class="flex-1 py-4 bg-slate-100 text-slate-400 font-bold rounded-xl">取消</button>
+                    <div class="space-y-5">
+                        <div class="space-y-2">
+                            <label class="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">目的地</label>
+                            <input type="text" id="eTitle" class="w-full p-5 rounded-2xl border border-slate-100 bg-slate-50 focus:bg-white focus:ring-4 focus:ring-indigo-50 outline-none font-bold transition-all" placeholder="輸入地點名稱">
+                        </div>
+                        <div class="space-y-2">
+                            <label class="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">旅行日期</label>
+                            <input type="date" id="eDate" class="w-full p-5 rounded-2xl border border-slate-100 bg-slate-50 focus:bg-white focus:ring-4 focus:ring-indigo-50 outline-none font-bold transition-all">
+                        </div>
+                        <div class="space-y-2">
+                            <label class="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">旅行故事</label>
+                            <textarea id="eDesc" rows="8" class="w-full p-5 rounded-2xl border border-slate-100 bg-slate-50 focus:bg-white focus:ring-4 focus:ring-indigo-50 outline-none font-medium transition-all" placeholder="分享當時的心情與故事..."></textarea>
+                        </div>
+                    </div>
+                    
+                    <div class="flex gap-4 pt-4">
+                        <button onclick="saveChanges()" class="flex-[2] py-5 bg-indigo-600 text-white font-black rounded-2xl shadow-lg shadow-indigo-200 active:scale-95 transition-all">儲存變更</button>
+                        <button onclick="toggleEditMode()" class="flex-1 py-5 bg-slate-100 text-slate-500 font-bold rounded-2xl active:scale-95 transition-all">取消</button>
                     </div>
                 </div>
             </div>
@@ -202,9 +238,10 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, doc, setDoc, addDoc, onSnapshot, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, doc, setDoc, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
+        // Firebase 配置 (與前版本一致)
         const firebaseConfig = {
             apiKey: "AIzaSyBFBhaRtjzBcav9dI7TfNt0E2ZjjUW1b28",
             authDomain: "mytraveljournal-74571.firebaseapp.com",
@@ -216,7 +253,6 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
         const appId = 'mytraveljournal-74571';
-        const googleProvider = new GoogleAuthProvider();
 
         let locations = [];
         let currentId = null;
@@ -224,19 +260,14 @@
         let viewMode = 'public';
         let unsub = null;
 
-        const setVh = () => {
-            let vh = window.innerHeight * 0.01;
-            document.documentElement.style.setProperty('--vh', `${vh}px`);
-        };
-        window.addEventListener('resize', setVh);
-        setVh();
-
+        // 初始化地圖
         function initMap() {
-            map = L.map('map', { center: [22.3193, 114.1694], zoom: 11, zoomControl: false });
+            map = L.map('map', { center: [22.3193, 114.1694], zoom: 12, zoomControl: false });
             L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png').addTo(map);
             markersLayer = L.layerGroup().addTo(map);
         }
 
+        // 監聽登錄狀態
         onAuthStateChanged(auth, (user) => {
             const profile = document.getElementById('userProfile');
             if (user) {
@@ -248,16 +279,18 @@
             }
         });
 
+        // 切換顯示模式 (公開 vs 管理)
         window.switchViewMode = (mode) => {
             viewMode = mode;
             const isPub = mode === 'public';
-            document.getElementById('btnPublic').className = isPub ? 'flex-1 py-2 rounded-lg text-[10px] font-black nav-active' : 'flex-1 py-2 rounded-lg text-[10px] font-black text-slate-400 bg-slate-50 border border-slate-100';
-            document.getElementById('btnPrivate').className = !isPub ? 'flex-1 py-2 rounded-lg text-[10px] font-black nav-active' : 'flex-1 py-2 rounded-lg text-[10px] font-black text-slate-400 bg-slate-50 border border-slate-100';
+            document.getElementById('btnPublic').className = isPub ? 'flex-1 py-2.5 rounded-xl text-[11px] font-black transition-all nav-active' : 'flex-1 py-2.5 rounded-xl text-[11px] font-black text-slate-400 bg-slate-50 border border-slate-100';
+            document.getElementById('btnPrivate').className = !isPub ? 'flex-1 py-2.5 rounded-xl text-[11px] font-black nav-active' : 'flex-1 py-2.5 rounded-xl text-[11px] font-black text-slate-400 bg-slate-50 border border-slate-100';
             document.getElementById('addBtn').style.display = (!isPub && auth.currentUser) ? 'flex' : 'none';
             document.getElementById('btnPrivate').style.display = auth.currentUser ? 'flex' : 'none';
             loadData();
         };
 
+        // 從 Firestore 加載數據
         async function loadData() {
             if (unsub) unsub();
             let ref = viewMode === 'public' 
@@ -270,27 +303,30 @@
                 locations.sort((a, b) => (b.date || "").localeCompare(a.date || ""));
                 renderList(); 
                 updateMarkers();
-            });
+            }, (err) => console.error("Firestore Error:", err));
         }
 
+        // 渲染地點清單
         function renderList() {
             const container = document.getElementById('locationScroller');
             container.innerHTML = '';
             locations.forEach(loc => {
                 const div = document.createElement('div');
                 div.className = `loc-item ${currentId === loc.id ? 'loc-active' : ''}`;
-                const thumb = (loc.media && loc.media[0]) ? loc.media[0].url : 'https://ui-avatars.com/api/?name=T';
+                const thumb = (loc.media && loc.media[0]) ? loc.media[0].url : 'https://ui-avatars.com/api/?background=f1f5f9&color=cbd5e1&name=Spot';
                 div.innerHTML = `<img src="${thumb}" class="loc-thumb"><p class="truncate">${loc.title}</p>`;
                 div.onclick = () => selectLoc(loc.id);
                 container.appendChild(div);
             });
         }
 
+        // 選擇地點後的處理邏輯 (含自動捲動)
         window.selectLoc = (id) => {
             currentId = id;
             const loc = locations.find(l => l.id === id);
             if (!loc) return;
 
+            // UI 切換
             document.getElementById('emptyContent').classList.add('hidden');
             document.getElementById('mainContent').classList.remove('hidden');
             document.getElementById('editMode').classList.add('hidden');
@@ -298,12 +334,13 @@
             const isAdmin = auth.currentUser && (viewMode === 'private');
             document.getElementById('adminTools').style.display = isAdmin ? 'flex' : 'none';
 
+            // 填充內容
             document.getElementById('cTitle').innerText = loc.title;
-            document.getElementById('cDate').innerText = loc.date || "";
-            document.getElementById('cDesc').innerText = loc.description || "暫無故事...";
+            document.getElementById('cDate').innerText = loc.date || "日期未註記";
+            document.getElementById('cDesc').innerText = loc.description || "這裡還沒有寫下故事...";
             
             const badge = document.getElementById('cBadge');
-            badge.innerText = loc.isPublic ? "Public" : "Private";
+            badge.innerText = loc.isPublic ? "公開分享" : "私人管理";
             badge.className = `privacy-badge ${loc.isPublic ? 'badge-public' : 'badge-private'}`;
 
             const mediaBox = document.getElementById('cMedia');
@@ -314,21 +351,48 @@
                 mediaBox.appendChild(card);
             });
 
-            map.flyTo([loc.lat, loc.lng], 13);
-            renderList(); updateMarkers();
-            
-            // 手機版自動捲動到內容
+            // 地圖互動
+            map.flyTo([loc.lat, loc.lng], 14, { animate: true, duration: 1.5 });
+            renderList(); 
+            updateMarkers();
+
+            // --- 自動平滑捲動邏輯 ---
             if (window.innerWidth <= 768) {
-                document.querySelector('.main-content-view').scrollIntoView({ behavior: 'smooth' });
+                // 手機版：捲動整個頁面到內容視圖
+                const contentElement = document.getElementById('contentView');
+                contentElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } else {
+                // 電腦版：重置右側視窗的捲動位置
+                document.getElementById('contentView').scrollTop = 0;
             }
         };
 
+        // 更新地圖標記
+        function updateMarkers() {
+            markersLayer.clearLayers();
+            locations.forEach(loc => {
+                const isActive = currentId === loc.id;
+                const icon = L.divIcon({
+                    html: `
+                        <div class="relative flex items-center justify-center">
+                            <div class="absolute w-8 h-8 ${isActive ? 'bg-indigo-500 opacity-20' : 'bg-rose-500 opacity-10'} rounded-full animate-ping"></div>
+                            <i class="fa-solid fa-location-dot ${isActive ? 'text-indigo-600 scale-125' : 'text-rose-500'} text-2xl transition-all shadow-sm"></i>
+                        </div>
+                    `,
+                    className: '', iconAnchor: [12, 24]
+                });
+                L.marker([loc.lat, loc.lng], { icon }).addTo(markersLayer).on('click', () => selectLoc(loc.id));
+            });
+        }
+
+        // 編輯模式切換
         window.toggleEditMode = () => {
             const main = document.getElementById('mainContent');
             const edit = document.getElementById('editMode');
             if (edit.classList.contains('hidden')) {
                 const loc = locations.find(l => l.id === currentId);
-                main.classList.add('hidden'); edit.classList.remove('hidden');
+                main.classList.add('hidden'); 
+                edit.classList.remove('hidden');
                 document.getElementById('eTitle').value = loc.title;
                 document.getElementById('eDate').value = loc.date || "";
                 document.getElementById('eDesc').value = loc.description || "";
@@ -337,6 +401,7 @@
             }
         };
 
+        // 儲存編輯
         window.saveChanges = async () => {
             const data = {
                 title: document.getElementById('eTitle').value,
@@ -344,22 +409,22 @@
                 description: document.getElementById('eDesc').value,
                 updatedAt: serverTimestamp()
             };
-            await setDoc(doc(db, 'artifacts', appId, 'users', auth.currentUser.uid, 'locations', currentId), data, {merge:true});
-            showToast("儲存成功"); toggleEditMode();
+            try {
+                await setDoc(doc(db, 'artifacts', appId, 'users', auth.currentUser.uid, 'locations', currentId), data, {merge:true});
+                showToast("變更已成功儲存"); 
+                toggleEditMode();
+            } catch (e) {
+                showToast("儲存失敗，請重試");
+            }
         };
 
-        function updateMarkers() {
-            markersLayer.clearLayers();
-            locations.forEach(loc => {
-                const icon = L.divIcon({
-                    html: `<i class="fa-solid fa-location-dot ${currentId===loc.id?'text-indigo-600':'text-rose-500'} text-xl"></i>`,
-                    className: '', iconAnchor: [10, 20]
-                });
-                L.marker([loc.lat, loc.lng], { icon }).addTo(markersLayer).on('click', () => selectLoc(loc.id));
-            });
+        function showToast(m) { 
+            const t = document.getElementById('toast'); 
+            t.innerText = m; 
+            t.style.display = 'block'; 
+            setTimeout(() => t.style.display = 'none', 3000); 
         }
 
-        function showToast(m) { const t = document.getElementById('toast'); t.innerText = m; t.style.display = 'block'; setTimeout(() => t.style.display = 'none', 2000); }
         window.onload = () => { initMap(); loadData(); };
     </script>
 </body>
