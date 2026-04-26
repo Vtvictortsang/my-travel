@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VIC 足跡 - 記憶分享平台</title>
+    <title>個人足跡 - 記憶分享平台</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -38,11 +38,6 @@
         }
         .media-img, .media-video { width: 100%; height: 100%; object-fit: cover; background: black; cursor: pointer; }
         
-        .image-input-group {
-            background: #f8fafc; padding: 16px; border-radius: 16px;
-            border: 1px solid #e2e8f0; margin-bottom: 12px;
-        }
-
         .list-thumb {
             width: 48px; height: 48px; border-radius: 12px;
             object-fit: cover; background: #e2e8f0; flex-shrink: 0;
@@ -53,17 +48,6 @@
             background: #f1f5f9; display: flex; align-items: center; justify-content: center;
             color: #cbd5e1; flex-shrink: 0;
         }
-        .month-header {
-            background: #f1f5f9; padding: 8px 12px;
-            font-size: 0.75rem; font-weight: 700; color: #64748b;
-            border-radius: 8px; margin: 12px 0 6px 0;
-            display: flex; justify-content: space-between; align-items: center;
-            cursor: pointer; transition: background 0.2s;
-        }
-        .month-header:hover { background: #e2e8f0; }
-        
-        .content-link { color: #4f46e5; text-decoration: underline; word-break: break-all; font-weight: 500; }
-        .content-link:hover { color: #4338ca; }
 
         .nav-item-active { background-color: #4f46e5 !important; color: white !important; }
         .nav-item-active .list-icon-placeholder { background: rgba(255,255,255,0.2); color: white; }
@@ -76,101 +60,95 @@
         }
         .user-avatar { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; }
 
-        /* Marker 修正樣式：確保尖端對準坐標 */
-        .marker-pin {
-            width: 32px;
-            height: 32px;
-            margin-left: -16px; /* 寬度一半 */
-            margin-top: -32px;  /* 高度全量，讓底部對準坐標 */
-            display: flex;
-            justify-content: center;
-            align-items: center;
+        .loading-overlay {
+            position: absolute; inset: 0; background: rgba(255,255,255,0.7);
+            display: flex; align-items: center; justify-content: center; z-index: 50;
         }
+
+        .data-mode-badge {
+            font-size: 10px; padding: 2px 8px; border-radius: 99px; font-weight: 900; text-transform: uppercase;
+        }
+        .mode-public { background: #10b981; color: white; }
+        .mode-private { background: #6366f1; color: white; }
     </style>
 </head>
 <body class="h-screen flex flex-col md:flex-row overflow-hidden">
 
     <div id="toast" class="toast">訊息內容</div>
 
+    <!-- 登入彈窗 (保持不變) -->
     <div id="authModal" class="auth-modal">
-        <div class="bg-white w-full max-w-md rounded-[2.5rem] p-8 shadow-2xl relative animate-in fade-in zoom-in duration-300">
+        <div class="bg-white w-full max-w-md rounded-[2.5rem] p-8 shadow-2xl relative">
             <button onclick="closeAuthModal()" class="absolute top-6 right-6 text-slate-300 hover:text-slate-900 transition-colors">
                 <i class="fa-solid fa-xmark text-xl"></i>
             </button>
             <div class="text-center mb-8">
-                <h2 id="authModalTitle" class="text-3xl font-black text-slate-900 mb-2">歡迎回來</h2>
-                <p id="authModalSub" class="text-slate-500 text-sm">請登入您的帳戶以同步足跡</p>
+                <h2 class="text-3xl font-black text-slate-900 mb-2">同步回憶</h2>
+                <p class="text-slate-500 text-sm">登入以管理您的私人足跡</p>
             </div>
-            <div class="space-y-4">
-                <button onclick="loginWithGoogle()" class="w-full flex items-center justify-center gap-3 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-slate-700 hover:bg-slate-100 transition-all">
-                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20" alt="Google">
-                    使用 Google 帳號繼續
-                </button>
-                <div class="flex items-center gap-4 py-2">
-                    <div class="h-px flex-1 bg-slate-100"></div>
-                    <span class="text-[10px] font-black text-slate-300 uppercase tracking-widest">或使用電子郵件</span>
-                    <div class="h-px flex-1 bg-slate-100"></div>
-                </div>
-                <div class="space-y-3">
-                    <input type="email" id="authEmail" placeholder="電子郵件" class="w-full p-4 bg-slate-50 border-none rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
-                    <input type="password" id="authPassword" placeholder="密碼" class="w-full p-4 bg-slate-50 border-none rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
-                </div>
-                <button id="mainAuthBtn" onclick="handleEmailAuth()" class="w-full py-4 bg-indigo-600 text-white font-black rounded-2xl shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all">
-                    登入帳戶
-                </button>
-                <p class="text-center text-sm text-slate-500">
-                    <span id="authSwitchLabel">還沒有帳號嗎？</span>
-                    <button onclick="toggleAuthMode()" id="authSwitchBtn" class="text-indigo-600 font-bold hover:underline">立即註冊</button>
-                </p>
-            </div>
+            <button onclick="loginWithGoogle()" class="w-full flex items-center justify-center gap-3 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-slate-700 hover:bg-slate-100 transition-all">
+                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20">
+                使用 Google 帳號登入
+            </button>
         </div>
     </div>
 
-    <aside class="w-full md:w-80 bg-white border-b md:border-b-0 md:border-r border-slate-200 flex flex-col h-[35vh] md:h-full z-10 shadow-sm shrink-0">
+    <!-- 左側邊欄 -->
+    <aside class="w-full md:w-80 bg-white border-b md:border-b-0 md:border-r border-slate-200 flex flex-col h-[35vh] md:h-full z-10 shrink-0">
         <div class="p-4 bg-slate-900 text-white flex flex-col gap-4 shrink-0">
             <div class="flex justify-between items-center">
-                <div id="googleAuthContainer" class="flex items-center gap-2">
-                    <div onclick="openAuthModal()" class="google-auth-btn">
-                        <i class="fa-solid fa-user-circle text-slate-400"></i>
-                        <span>登入 / 註冊</span>
-                    </div>
-                </div>
-                <button onclick="addNewLocation()" class="p-2 bg-indigo-600 hover:bg-indigo-500 rounded-xl transition-all shadow-lg shadow-indigo-900/20">
+                <div id="authStatusContainer" class="flex items-center gap-2"></div>
+                <button id="addBtn" onclick="addNewLocation()" class="hidden p-2 bg-indigo-600 hover:bg-indigo-500 rounded-xl transition-all shadow-lg">
                     <i class="fa-solid fa-plus text-xs"></i>
                 </button>
             </div>
-            <h1 class="font-bold text-lg tracking-tight">VIC 足跡</h1>
-        </div>
-        <div id="locationList" class="flex-1 overflow-y-auto custom-scrollbar p-3"></div>
-    </aside>
-
-    <main class="flex-1 flex flex-col h-[65vh] md:h-full overflow-hidden bg-slate-50">
-        <div class="h-1/3 shrink-0 relative border-b border-slate-200 shadow-sm">
-            <div id="map"></div>
-            <!-- 地圖上的搜尋框 -->
-            <div id="mapSearchBox" class="absolute top-4 left-4 right-4 z-[1000] max-w-xs transition-opacity duration-300 opacity-0 pointer-events-none">
-                <div class="bg-white rounded-2xl shadow-xl flex items-center p-2 border border-slate-200">
-                    <i class="fa-solid fa-magnifying-glass text-slate-400 ml-2"></i>
-                    <input type="text" id="mapSearchInput" placeholder="搜尋精確地點..." class="flex-1 bg-transparent border-none outline-none p-2 text-sm font-medium">
-                    <button onclick="searchPlace()" class="bg-indigo-600 text-white px-3 py-1.5 rounded-xl text-xs font-bold hover:bg-indigo-700">搜尋</button>
-                </div>
+            <div class="flex items-center justify-between">
+                <h1 id="sidebarTitle" class="font-bold text-lg tracking-tight">足跡展示</h1>
+                <span id="modeBadge" class="data-mode-badge mode-public">公開</span>
             </div>
         </div>
+        
+        <div id="viewToggle" class="hidden p-3 bg-slate-50 border-b border-slate-200 flex gap-2">
+            <button onclick="switchViewMode('public')" id="btnPublicView" class="flex-1 py-2 rounded-lg text-[10px] font-black uppercase transition-all">公開區域</button>
+            <button onclick="switchViewMode('private')" id="btnPrivateView" class="flex-1 py-2 rounded-lg text-[10px] font-black uppercase transition-all">私人空間</button>
+        </div>
+
+        <div id="locationList" class="flex-1 overflow-y-auto custom-scrollbar p-3 relative">
+            <div id="listLoading" class="loading-overlay hidden">
+                <i class="fa-solid fa-circle-notch fa-spin text-indigo-500"></i>
+            </div>
+        </div>
+    </aside>
+
+    <!-- 右側主內容區 -->
+    <main class="flex-1 flex flex-col h-[65vh] md:h-full overflow-hidden bg-slate-50">
+        <div class="h-1/3 shrink-0 relative border-b border-slate-200">
+            <div id="map"></div>
+        </div>
+
         <div class="h-2/3 overflow-y-auto custom-scrollbar p-4 md:p-8">
             <div id="emptyState" class="flex flex-col items-center justify-center h-full text-slate-300">
                 <i class="fa-solid fa-map-location-dot text-6xl mb-4 opacity-20"></i>
-                <p class="font-medium">選擇左側足跡開始回憶</p>
+                <p id="emptyText" class="font-medium text-center">歡迎來到足跡平台</p>
             </div>
+
             <div id="contentView" class="hidden max-w-5xl mx-auto space-y-8">
+                <!-- 顯示區 -->
                 <div id="displaySection" class="space-y-6">
                     <div class="flex flex-col md:flex-row md:items-end justify-between gap-6">
                         <div class="space-y-1">
-                            <p id="displayDate" class="text-indigo-500 font-black text-xs uppercase tracking-widest"></p>
+                            <div class="flex items-center gap-2">
+                                <p id="displayDate" class="text-indigo-500 font-black text-xs uppercase tracking-widest"></p>
+                                <span id="contentPrivacyBadge" class="data-mode-badge"></span>
+                            </div>
                             <h2 id="displayTitle" class="text-4xl md:text-5xl font-black text-slate-900 tracking-tight"></h2>
                         </div>
-                        <div class="flex gap-2">
+                        <div id="adminControls" class="hidden flex gap-2">
                             <button onclick="toggleEditMode()" class="px-6 py-3 bg-white border border-slate-200 rounded-2xl shadow-sm font-bold text-slate-700 hover:bg-slate-50 transition-all flex items-center gap-2">
-                                <i class="fa-solid fa-pen-nib text-xs"></i> 編輯
+                                <i class="fa-solid fa-pen-nib text-xs"></i> 編輯內容
+                            </button>
+                            <button onclick="deleteLocation()" class="p-3 text-rose-500 hover:bg-rose-50 rounded-2xl transition-all">
+                                <i class="fa-solid fa-trash-can"></i>
                             </button>
                         </div>
                     </div>
@@ -181,38 +159,45 @@
                     </div>
                 </div>
 
+                <!-- 編輯區 -->
                 <div id="editForm" class="hidden bg-white rounded-[2.5rem] shadow-xl p-6 md:p-10 space-y-8 border border-slate-100">
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div class="md:col-span-1 space-y-2">
-                            <label class="block text-xs font-black text-slate-400 uppercase ml-2">日期 Date</label>
-                            <input type="date" id="editDateInput" class="w-full p-4 bg-slate-50 border-none rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-bold">
-                        </div>
-                        <div class="md:col-span-2 space-y-2">
-                            <label class="block text-xs font-black text-slate-400 uppercase ml-2">地點名稱 Location</label>
-                            <input type="text" id="editTitleInput" class="w-full p-4 bg-slate-50 border-none rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-bold" placeholder="去過哪裡？">
-                        </div>
-                    </div>
-                    <div class="space-y-2">
-                        <label class="block text-xs font-black text-slate-400 uppercase ml-2">坐標準確度精修 Coordinate</label>
-                        <div id="coordDisplay" class="w-full p-4 bg-slate-900 text-indigo-300 rounded-2xl font-mono text-xs tracking-wider flex justify-between items-center">
-                            <span>直接點擊地圖以精確定位</span>
-                            <span id="latLngText">尚未定位</span>
-                        </div>
-                    </div>
-                    <div class="space-y-4">
-                        <div class="flex justify-between items-center px-2">
-                            <label class="block text-xs font-black text-slate-400 uppercase">媒體連結 Media</label>
-                            <div class="flex gap-2">
-                                <button onclick="addMediaInput('image')" class="bg-indigo-50 text-indigo-600 px-4 py-2 rounded-xl font-bold text-xs hover:bg-indigo-100">+ 相片</button>
-                                <button onclick="addMediaInput('video')" class="bg-amber-50 text-amber-600 px-4 py-2 rounded-xl font-bold text-xs hover:bg-amber-100">+ 影片</button>
+                    <div class="flex flex-col md:flex-row gap-6">
+                        <div class="flex-1 space-y-8">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div class="space-y-2">
+                                    <label class="block text-xs font-black text-slate-400 uppercase ml-2">日期</label>
+                                    <input type="date" id="editDateInput" class="w-full p-4 bg-slate-50 border-none rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500">
+                                </div>
+                                <div class="space-y-2">
+                                    <label class="block text-xs font-black text-slate-400 uppercase ml-2">地點名稱</label>
+                                    <input type="text" id="editTitleInput" class="w-full p-4 bg-slate-50 border-none rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500">
+                                </div>
+                            </div>
+
+                            <div class="space-y-2">
+                                <label class="block text-xs font-black text-slate-400 uppercase ml-2">隱私與分享</label>
+                                <div class="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl">
+                                    <div class="flex-1">
+                                        <p class="text-sm font-bold text-slate-700">公開此足跡</p>
+                                        <p class="text-[10px] text-slate-400">開啟後，所有人都能在「公開區域」看到此內容</p>
+                                    </div>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" id="editPublicToggle" class="sr-only peer">
+                                        <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div id="mediaInputsContainer" class="space-y-3"></div>
+                            <button onclick="addMediaInput('image')" class="w-full py-3 border-2 border-dashed border-slate-200 rounded-2xl text-slate-400 font-bold text-sm hover:border-indigo-300 hover:text-indigo-500 transition-all">+ 新增媒體連結</button>
+
+                            <textarea id="editDescInput" rows="6" class="w-full p-6 bg-slate-50 border-none rounded-[2rem] outline-none focus:ring-2 focus:ring-indigo-500" placeholder="寫下當時的回憶..."></textarea>
+                            
+                            <div class="flex gap-4">
+                                <button onclick="saveChanges()" class="flex-[2] bg-indigo-600 text-white font-black py-5 rounded-2xl shadow-lg hover:bg-indigo-700">儲存變更</button>
+                                <button onclick="toggleEditMode()" class="flex-1 py-5 bg-slate-100 text-slate-500 font-bold rounded-2xl">放棄</button>
                             </div>
                         </div>
-                        <div id="mediaInputsContainer" class="space-y-3"></div>
-                    </div>
-                    <textarea id="editDescInput" rows="8" class="w-full p-6 bg-slate-50 border-none rounded-[2rem] outline-none focus:ring-2 focus:ring-indigo-500 transition-all resize-none" placeholder="寫下當時的回憶..."></textarea>
-                    <div class="flex gap-4 pt-4">
-                        <button id="saveBtn" onclick="saveChanges()" class="flex-[2] bg-indigo-600 text-white font-black py-5 rounded-2xl shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all">儲存足跡</button>
-                        <button onclick="toggleEditMode()" class="flex-1 py-5 bg-slate-100 text-slate-500 font-bold rounded-2xl hover:bg-slate-200 transition-all">放棄</button>
                     </div>
                 </div>
             </div>
@@ -222,8 +207,8 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, doc, setDoc, addDoc, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, doc, setDoc, addDoc, onSnapshot, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyBFBhaRtjzBcav9dI7TfNt0E2ZjjUW1b28",
@@ -243,279 +228,222 @@
         let locations = [];
         let currentId = null;
         let map, markersLayer, tempMarker;
-        let collapsedMonths = new Set();
-        let authMode = 'login';
-
-        window.openAuthModal = () => document.getElementById('authModal').style.display = 'flex';
-        window.closeAuthModal = () => document.getElementById('authModal').style.display = 'none';
-        window.toggleAuthMode = () => {
-            authMode = authMode === 'login' ? 'register' : 'login';
-            document.getElementById('authModalTitle').innerText = authMode === 'login' ? '歡迎回來' : '建立帳號';
-            document.getElementById('authModalSub').innerText = authMode === 'login' ? '請登入您的帳戶以同步足跡' : '填寫資料以開始收藏您的足跡';
-            document.getElementById('mainAuthBtn').innerText = authMode === 'login' ? '登入帳戶' : '註冊帳號';
-            document.getElementById('authSwitchLabel').innerText = authMode === 'login' ? '還沒有帳號嗎？' : '已經有帳號了？';
-            document.getElementById('authSwitchBtn').innerText = authMode === 'login' ? '立即註冊' : '登入帳號';
-        };
-
-        window.handleAuth = () => {
-            if (auth.currentUser && !auth.currentUser.isAnonymous) {
-                if (confirm("確定要登出嗎？")) signOut(auth).then(() => showToast("已登出"));
-            } else { openAuthModal(); }
-        };
-
-        window.loginWithGoogle = async () => {
-            try { await signInWithPopup(auth, googleProvider); closeAuthModal(); showToast("Google 登入成功"); } catch (e) { showToast("登入失敗"); }
-        };
-
-        window.handleEmailAuth = async () => {
-            const email = document.getElementById('authEmail').value;
-            const password = document.getElementById('authPassword').value;
-            if (!email || !password) return showToast("請填寫所有欄位");
-            try {
-                if (authMode === 'register') { await createUserWithEmailAndPassword(auth, email, password); showToast("註冊成功"); }
-                else { await signInWithEmailAndPassword(auth, email, password); showToast("登入成功"); }
-                closeAuthModal();
-            } catch (e) { showToast("處理失敗：帳號已存在或密碼錯誤"); }
-        };
-
-        function convertDriveUrl(url) {
-            if (!url || !url.includes("drive.google.com")) return url;
-            const match = url.match(/\/file\/d\/(.+?)\/(view|edit)/) || url.match(/id=(.+?)(&|$)/);
-            return match ? `https://drive.google.com/uc?export=download&id=${match[1]}` : url;
-        }
-
-        function linkify(text) {
-            if (!text) return "";
-            const urlPattern = /(https?:\/\/[^\s]+)/g;
-            return text.replace(urlPattern, function(url) {
-                return `<a href="${url}" target="_blank" class="content-link">${url}</a>`;
-            });
-        }
-
-        window.addMediaInput = (type, val = '') => {
-            const container = document.getElementById('mediaInputsContainer');
-            const div = document.createElement('div');
-            div.className = 'image-input-group flex items-center gap-3';
-            div.dataset.type = type;
-            div.innerHTML = `
-                <div class="w-10 h-10 flex items-center justify-center bg-white rounded-xl shadow-sm shrink-0">
-                    <i class="fa-solid ${type === 'image' ? 'fa-image text-indigo-500' : 'fa-video text-amber-500'}"></i>
-                </div>
-                <input type="text" class="media-url-input flex-1 p-3 border border-slate-200 rounded-xl text-xs" placeholder="貼上連結..." value="${val}">
-                <button onclick="this.parentElement.remove()" class="p-2 text-slate-300 hover:text-red-500 transition-colors"><i class="fa-solid fa-trash-can"></i></button>
-            `;
-            container.appendChild(div);
-        };
-
-        function showToast(msg) {
-            const t = document.getElementById('toast');
-            t.innerText = msg; t.style.display = 'block';
-            setTimeout(() => t.style.display = 'none', 3000);
-        }
-
-        onAuthStateChanged(auth, user => {
-            const container = document.getElementById('googleAuthContainer');
-            if (user && !user.isAnonymous) {
-                const avatar = user.photoURL || `https://ui-avatars.com/api/?name=${user.email}&background=6366f1&color=fff`;
-                container.innerHTML = `<div onclick="handleAuth()" class="google-auth-btn"><img src="${avatar}" class="user-avatar"><span>${user.displayName || user.email.split('@')[0]}</span></div>`;
-            } else {
-                container.innerHTML = `<div onclick="openAuthModal()" class="google-auth-btn"><i class="fa-solid fa-user-circle text-slate-400"></i><span>登入 / 註冊</span></div>`;
-                if (!user) signInAnonymously(auth);
-            }
-            onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'locations'), (snap) => {
-                locations = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-                locations.sort((a, b) => (b.date || "").localeCompare(a.date || ""));
-                renderList(); updateMarkers();
-                if (currentId) selectLoc(currentId, false);
-            }, (err) => console.error("Firestore Error:", err));
-        });
+        let viewMode = 'public';
+        let unsubscribe = null;
 
         function initMap() {
             map = L.map('map', { center: [23.6978, 120.9605], zoom: 7, zoomControl: false });
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            }).addTo(map);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png').addTo(map);
             markersLayer = L.layerGroup().addTo(map);
-            map.on('click', (e) => { 
+            map.on('click', (e) => {
                 if (!document.getElementById('editForm').classList.contains('hidden')) {
                     updateTempMarker(e.latlng.lat, e.latlng.lng);
                 }
             });
         }
 
-        // 新增：搜尋地點功能 (使用 OpenStreetMap Nominatim API)
-        window.searchPlace = async () => {
-            const query = document.getElementById('mapSearchInput').value.trim();
-            if (!query) return;
-            try {
-                const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`);
-                const data = await response.json();
-                if (data && data.length > 0) {
-                    const { lat, lon, display_name } = data[0];
-                    const latitude = parseFloat(lat);
-                    const longitude = parseFloat(lon);
-                    map.flyTo([latitude, longitude], 15);
-                    updateTempMarker(latitude, longitude);
-                    document.getElementById('editTitleInput').value = display_name.split(',')[0];
-                    showToast("已定位至精確坐標");
-                } else {
-                    showToast("找不到該地點");
-                }
-            } catch (e) {
-                showToast("搜尋服務暫時無法使用");
+        // 轉換網址（處理 Google Drive）
+        function convertUrl(url) {
+            if (!url) return '';
+            if (url.includes("drive.google.com")) {
+                const id = url.match(/\/file\/d\/(.+?)\//)?.[1] || url.match(/id=(.+?)(&|$)/)?.[1];
+                return id ? `https://drive.google.com/uc?export=download&id=${id}` : url;
             }
+            return url;
+        }
+
+        window.switchViewMode = (mode) => {
+            viewMode = mode;
+            const isPub = mode === 'public';
+            document.getElementById('btnPublicView').className = isPub ? 'flex-1 py-2 rounded-lg text-[10px] font-black uppercase bg-slate-900 text-white shadow-md' : 'flex-1 py-2 rounded-lg text-[10px] font-black uppercase bg-white text-slate-400 border border-slate-100';
+            document.getElementById('btnPrivateView').className = !isPub ? 'flex-1 py-2 rounded-lg text-[10px] font-black uppercase bg-indigo-600 text-white shadow-md' : 'flex-1 py-2 rounded-lg text-[10px] font-black uppercase bg-white text-slate-400 border border-slate-100';
+            document.getElementById('modeBadge').innerText = isPub ? '公開展示' : '我的私人';
+            document.getElementById('modeBadge').className = `data-mode-badge ${isPub ? 'mode-public' : 'mode-private'}`;
+            document.getElementById('addBtn').style.display = isPub ? 'none' : 'block';
+            loadData();
         };
 
-        function renderList() {
-            const list = document.getElementById('locationList');
-            list.innerHTML = '';
-            const groups = {};
-            locations.forEach(loc => {
-                const month = (loc.date || "未分類").substring(0, 7);
-                if (!groups[month]) groups[month] = [];
-                groups[month].push(loc);
-            });
-            Object.keys(groups).sort().reverse().forEach(month => {
-                const groupDiv = document.createElement('div');
-                groupDiv.className = 'mb-4';
-                const isCollapsed = collapsedMonths.has(month);
-                groupDiv.innerHTML = `<div class="month-header">${month} <span>${groups[month].length}</span></div>`;
-                groupDiv.querySelector('.month-header').onclick = () => { isCollapsed ? collapsedMonths.delete(month) : collapsedMonths.add(month); renderList(); };
-                if (!isCollapsed) {
-                    groups[month].forEach(loc => {
-                        const item = document.createElement('div');
-                        item.className = `p-2.5 mb-1 cursor-pointer rounded-xl flex items-center gap-3 transition-all ${currentId === loc.id ? 'nav-item-active shadow-md' : 'hover:bg-slate-50 text-slate-600'}`;
-                        let thumbHtml = `<div class="list-icon-placeholder"><i class="fa-solid fa-location-dot"></i></div>`;
-                        if (loc.media?.length) {
-                            const first = loc.media.find(m => m.type === 'image') || loc.media[0];
-                            if (first.type === 'image') thumbHtml = `<img src="${convertDriveUrl(first.url)}" class="list-thumb">`;
-                            else thumbHtml = `<div class="list-icon-placeholder" style="background:#fff1f2"><i class="fa-solid fa-play text-rose-400"></i></div>`;
-                        }
-                        item.innerHTML = `${thumbHtml}<div class="truncate font-bold text-xs flex-1">${loc.title}</div>`;
-                        item.onclick = (e) => { e.stopPropagation(); selectLoc(loc.id); };
-                        groupDiv.appendChild(item);
-                    });
-                }
-                list.appendChild(groupDiv);
+        async function loadData() {
+            if (unsubscribe) unsubscribe();
+            document.getElementById('listLoading').classList.remove('hidden');
+            let ref = viewMode === 'public' 
+                ? collection(db, 'artifacts', appId, 'public', 'data', 'locations')
+                : collection(db, 'artifacts', appId, 'users', auth.currentUser.uid, 'locations');
+
+            unsubscribe = onSnapshot(ref, (snap) => {
+                locations = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                locations.sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+                renderList(); 
+                updateMarkers();
+                document.getElementById('listLoading').classList.add('hidden');
             });
         }
 
-        function updateMarkers() {
-            markersLayer.clearLayers();
+        onAuthStateChanged(auth, (user) => {
+            const container = document.getElementById('authStatusContainer');
+            const toggle = document.getElementById('viewToggle');
+            if (user) {
+                const name = user.displayName || user.email.split('@')[0];
+                container.innerHTML = `<div onclick="handleLogout()" class="google-auth-btn"><img src="${user.photoURL || 'https://ui-avatars.com/api/?name='+name}" class="user-avatar"><span>登出</span></div>`;
+                toggle.classList.remove('hidden');
+                switchViewMode('private');
+            } else {
+                container.innerHTML = `<div onclick="openAuthModal()" class="google-auth-btn"><i class="fa-solid fa-user-circle text-slate-400"></i><span>立即登入</span></div>`;
+                toggle.classList.add('hidden');
+                switchViewMode('public');
+            }
+        });
+
+        window.renderList = () => {
+            const list = document.getElementById('locationList');
+            list.innerHTML = '';
             locations.forEach(loc => {
-                if (loc.lat) {
-                    // 使用 marker-pin 修正偏移
-                    const icon = L.divIcon({ 
-                        html: `<div class="marker-pin"><i class="fa-solid fa-location-dot ${currentId === loc.id ? 'text-indigo-600 scale-125 shadow-lg' : 'text-rose-500'} text-2xl"></i></div>`, 
-                        className: '',
-                        iconSize: [32, 32],
-                        iconAnchor: [16, 32] // 修正錨點：水平中心，垂直底部
-                    });
-                    const m = L.marker([loc.lat, loc.lng], { icon });
-                    m.on('click', () => selectLoc(loc.id));
-                    markersLayer.addLayer(m);
+                const item = document.createElement('div');
+                item.className = `p-2.5 mb-1 cursor-pointer rounded-xl flex items-center gap-3 transition-all ${currentId === loc.id ? 'nav-item-active shadow-md' : 'hover:bg-slate-50 text-slate-600'}`;
+                
+                // 找回縮圖顯示
+                let thumbHtml = `<div class="list-icon-placeholder"><i class="fa-solid fa-location-dot"></i></div>`;
+                if (loc.media && loc.media.length > 0) {
+                    const firstImg = loc.media.find(m => m.type === 'image');
+                    if (firstImg) thumbHtml = `<img src="${convertUrl(firstImg.url)}" class="list-thumb">`;
                 }
+
+                item.innerHTML = `${thumbHtml}<div class="truncate font-bold text-xs flex-1">${loc.title}</div>`;
+                item.onclick = () => selectLoc(loc.id);
+                list.appendChild(item);
             });
-        }
+        };
 
         window.selectLoc = (id, shouldFly = true) => {
             currentId = id;
             const loc = locations.find(l => l.id === id);
             if (!loc) return;
+            
             document.getElementById('emptyState').classList.add('hidden');
-            const view = document.getElementById('contentView'); view.classList.remove('hidden');
+            document.getElementById('contentView').classList.remove('hidden');
             document.getElementById('displaySection').classList.remove('hidden');
             document.getElementById('editForm').classList.add('hidden');
+            document.getElementById('adminControls').style.display = viewMode === 'private' ? 'flex' : 'none';
 
             document.getElementById('displayTitle').innerText = loc.title;
             document.getElementById('displayDate').innerText = loc.date || "未分類";
-            document.getElementById('displayDescription').innerHTML = linkify(loc.description) || "尚無內容";
+            document.getElementById('displayDescription').innerText = loc.description || "";
             
-            const gallery = document.getElementById('mediaGallery');
-            gallery.innerHTML = '';
-            if (loc.media) {
-                loc.media.forEach(m => {
-                    const div = document.createElement('div');
-                    div.className = 'media-item';
-                    const url = convertDriveUrl(m.url);
-                    if (m.type === 'image') div.innerHTML = `<img src="${url}" class="media-img" onclick="window.open('${url}')">`;
-                    else div.innerHTML = `<video src="${url}" class="media-video" controls></video>`;
-                    gallery.appendChild(div);
-                });
-            }
+            const pBadge = document.getElementById('contentPrivacyBadge');
+            pBadge.innerText = loc.isPublic ? "公開" : "私人";
+            pBadge.className = `data-mode-badge ${loc.isPublic ? 'mode-public' : 'mode-private'}`;
+
+            const gallery = document.getElementById('mediaGallery'); gallery.innerHTML = '';
+            (loc.media || []).forEach(m => {
+                const div = document.createElement('div');
+                div.className = 'media-item';
+                const url = convertUrl(m.url);
+                div.innerHTML = m.type === 'image' ? `<img src="${url}" class="media-img">` : `<video src="${url}" class="media-video" controls></video>`;
+                gallery.appendChild(div);
+            });
+
             if (shouldFly && loc.lat) map.flyTo([loc.lat, loc.lng], 12);
             renderList(); updateMarkers();
-        };
-
-        window.addNewLocation = async () => {
-            const today = new Date().toISOString().split('T')[0];
-            const res = await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'locations'), {
-                title: "新足跡", date: today, lat: 23.69, lng: 120.96, description: "", media: [], createdAt: serverTimestamp()
-            });
-            currentId = res.id;
-            toggleEditMode();
         };
 
         window.toggleEditMode = () => {
             const form = document.getElementById('editForm');
             const display = document.getElementById('displaySection');
-            const searchBox = document.getElementById('mapSearchBox');
-            
             if (form.classList.contains('hidden')) {
                 const loc = locations.find(l => l.id === currentId);
-                form.classList.remove('hidden'); 
-                display.classList.add('hidden');
-                searchBox.classList.remove('opacity-0', 'pointer-events-none'); // 顯示搜尋框
-                
+                form.classList.remove('hidden'); display.classList.add('hidden');
                 document.getElementById('editTitleInput').value = loc.title;
                 document.getElementById('editDateInput').value = loc.date || "";
                 document.getElementById('editDescInput').value = loc.description || "";
+                document.getElementById('editPublicToggle').checked = !!loc.isPublic;
                 document.getElementById('mediaInputsContainer').innerHTML = '';
-                if (loc.media) loc.media.forEach(m => addMediaInput(m.type, m.url));
+                (loc.media || []).forEach(m => addMediaInput(m.type, m.url));
                 updateTempMarker(loc.lat, loc.lng);
             } else {
-                form.classList.add('hidden'); 
-                display.classList.remove('hidden');
-                searchBox.classList.add('opacity-0', 'pointer-events-none'); // 隱藏搜尋框
+                form.classList.add('hidden'); display.classList.remove('hidden');
                 if (tempMarker) map.removeLayer(tempMarker);
             }
         };
 
-        function updateTempMarker(lat, lng) {
+        window.addMediaInput = (type, val = '') => {
+            const container = document.getElementById('mediaInputsContainer');
+            const div = document.createElement('div');
+            div.className = 'flex items-center gap-2 bg-white p-2 rounded-xl border border-slate-100';
+            div.innerHTML = `
+                <select class="bg-transparent text-[10px] font-bold outline-none"><option value="image" ${type==='image'?'selected':''}>圖</option><option value="video" ${type==='video'?'selected':''}>影</option></select>
+                <input type="text" class="flex-1 text-xs outline-none" placeholder="網址" value="${val}">
+                <button onclick="this.parentElement.remove()" class="text-slate-300 hover:text-rose-500 px-2"><i class="fa-solid fa-xmark"></i></button>
+            `;
+            container.appendChild(div);
+        };
+
+        window.updateTempMarker = (lat, lng) => {
             if (tempMarker) map.removeLayer(tempMarker);
-            const icon = L.divIcon({ 
-                html: `<div class="marker-pin"><i class="fa-solid fa-location-crosshairs text-indigo-500 text-3xl animate-pulse"></i></div>`, 
-                className: '',
-                iconSize: [32, 32],
-                iconAnchor: [16, 32]
-            });
-            tempMarker = L.marker([lat, lng], { icon }).addTo(map);
-            document.getElementById('latLngText').innerText = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
-        }
+            tempMarker = L.marker([lat, lng], { draggable: true }).addTo(map);
+        };
 
         window.saveChanges = async () => {
-            const mediaInputs = document.querySelectorAll('.image-input-group');
-            const mediaList = Array.from(mediaInputs).map(g => ({ 
-                type: g.dataset.type, 
-                url: g.querySelector('.media-url-input').value.trim() 
+            const media = Array.from(document.querySelectorAll('#mediaInputsContainer > div')).map(div => ({
+                type: div.querySelector('select').value,
+                url: div.querySelector('input').value
             })).filter(m => m.url);
-            
+
+            const isPublic = document.getElementById('editPublicToggle').checked;
             const data = {
                 title: document.getElementById('editTitleInput').value || "未命名",
                 date: document.getElementById('editDateInput').value,
                 description: document.getElementById('editDescInput').value,
-                media: mediaList
+                media: media,
+                isPublic: isPublic,
+                updatedAt: serverTimestamp()
             };
-            
-            if (tempMarker) { 
-                const p = tempMarker.getLatLng(); 
-                data.lat = p.lat; 
-                data.lng = p.lng; 
+            if (tempMarker) { const p = tempMarker.getLatLng(); data.lat = p.lat; data.lng = p.lng; }
+
+            // 1. 儲存到私人空間
+            const privateDoc = doc(db, 'artifacts', appId, 'users', auth.currentUser.uid, 'locations', currentId);
+            await setDoc(privateDoc, data, { merge: true });
+
+            // 2. 如果設為公開，同步到公共空間；如果取消公開，從公共空間移除
+            const publicDoc = doc(db, 'artifacts', appId, 'public', 'data', 'locations', currentId);
+            if (isPublic) {
+                await setDoc(publicDoc, { ...data, author: auth.currentUser.displayName || "匿名" }, { merge: true });
+            } else {
+                await deleteDoc(publicDoc).catch(() => {});
             }
-            
-            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'locations', currentId), data, { merge: true });
-            showToast("已儲存足跡"); toggleEditMode();
+
+            showToast("同步成功！");
+            toggleEditMode();
         };
+
+        window.addNewLocation = async () => {
+            const ref = collection(db, 'artifacts', appId, 'users', auth.currentUser.uid, 'locations');
+            const res = await addDoc(ref, { title: "新地點", date: new Date().toISOString().split('T')[0], lat: 23.6, lng: 121, media: [], isPublic: false });
+            currentId = res.id;
+            toggleEditMode();
+        };
+
+        window.deleteLocation = async () => {
+            if (!confirm("確定要刪除嗎？")) return;
+            await deleteDoc(doc(db, 'artifacts', appId, 'users', auth.currentUser.uid, 'locations', currentId));
+            await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'locations', currentId)).catch(()=>{});
+            location.reload();
+        };
+
+        window.updateMarkers = () => {
+            markersLayer.clearLayers();
+            locations.forEach(loc => {
+                if (loc.lat) {
+                    const icon = L.divIcon({ html: `<i class="fa-solid fa-location-dot ${currentId===loc.id?'text-indigo-600 scale-125':'text-rose-500'} text-2xl"></i>`, className: '', iconAnchor: [12, 24] });
+                    L.marker([loc.lat, loc.lng], { icon }).addTo(markersLayer).on('click', () => selectLoc(loc.id));
+                }
+            });
+        };
+
+        window.handleLogout = () => signOut(auth).then(() => location.reload());
+        window.loginWithGoogle = () => signInWithPopup(auth, googleProvider);
+        window.openAuthModal = () => document.getElementById('authModal').style.display = 'flex';
+        window.closeAuthModal = () => document.getElementById('authModal').style.display = 'none';
+        function showToast(m) { const t = document.getElementById('toast'); t.innerText = m; t.style.display = 'block'; setTimeout(() => t.style.display = 'none', 3000); }
 
         window.onload = initMap;
     </script>
