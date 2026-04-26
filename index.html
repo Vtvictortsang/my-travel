@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>足跡管理者中心 - 響應式視角</title>
+    <title>足跡管理者中心 - 比例優化版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -15,7 +15,7 @@
 
         body { 
             font-family: 'Noto Sans TC', sans-serif; 
-            background-color: #f1f5f9; 
+            background-color: #f8fafc; 
             margin: 0; padding: 0; overflow: hidden;
             height: 100vh; height: calc(var(--vh, 1vh) * 100);
         }
@@ -23,68 +23,104 @@
         /* --- 基礎佈局架構 --- */
         #app-container { display: flex; flex-direction: column; height: 100%; width: 100%; }
 
-        /* 手機版：垂直 4 層 (預設) */
-        .layer-1 { height: 10%; background: #1e293b; display: flex; align-items: center; padding: 0 1rem; z-index: 50; }
-        .layer-2 { height: 20%; position: relative; background: #000; }
-        .layer-3 { height: 20%; background: #ffffff; border-bottom: 1px solid #e2e8f0; display: flex; flex-direction: column; }
-        .layer-4 { height: 50%; background: #ffffff; overflow-y: auto; position: relative; }
+        /* 手機版：重新定義 4 層比例 (優化內容展示) */
+        .layer-1 { height: 60px; background: #1e293b; display: flex; align-items: center; padding: 0 1.25rem; z-index: 50; flex-shrink: 0; }
+        .layer-2 { height: 25%; position: relative; background: #e2e8f0; border-bottom: 1px solid #e2e8f0; } /* 地圖高度適中 */
+        .layer-3 { height: 120px; background: #ffffff; border-bottom: 1px solid #f1f5f9; display: flex; flex-direction: column; flex-shrink: 0; } /* 列表高度固定 */
+        .layer-4 { flex: 1; background: #ffffff; overflow-y: auto; position: relative; } /* 內容層自動撐開 */
 
-        /* 網頁版：橫向左右分欄 (螢幕寬度 > 1024px) */
+        /* 網頁版：橫向左右分欄 (螢幕寬度 >= 1024px) */
         @media (min-width: 1024px) {
             #app-container { flex-direction: row; }
-            /* 左側欄：控制、地圖與列表 (佔 40%) */
-            .sidebar-admin { width: 40%; height: 100%; display: flex; flex-direction: column; border-right: 1px solid #e2e8f0; }
-            /* 右側欄：主內容 (佔 60%) */
-            .main-content-view { width: 60%; height: 100%; overflow-y: auto; background: #fff; }
             
-            /* 調整網頁版層級高度 */
-            .sidebar-admin .layer-1 { height: 80px; }
-            .sidebar-admin .layer-2 { flex: 1; height: auto; } /* 地圖撐開 */
-            .sidebar-admin .layer-3 { height: 250px; border-bottom: none; border-top: 1px solid #e2e8f0; }
+            /* 左側欄：控制在 380px 左右最為專業 */
+            .sidebar-admin { 
+                width: 380px; height: 100%; 
+                display: flex; flex-direction: column; 
+                border-right: 1px solid #e2e8f0; 
+                background: #fff;
+                z-index: 60;
+                box-shadow: 10px 0 30px rgba(0,0,0,0.02);
+            }
             
-            .layer-4 { height: 100% !important; width: 100%; }
+            .main-content-view { 
+                flex: 1; height: 100%; 
+                overflow-y: auto; 
+                background: #fcfcfd; 
+            }
+            
+            /* 調整網頁版內部層級 */
+            .sidebar-admin .layer-1 { height: 80px; background: #1e293b; }
+            .sidebar-admin .layer-2 { height: 300px; border-bottom: none; } /* 固定地圖高度 */
+            .sidebar-admin .layer-3 { flex: 1; height: auto; border-top: 1px solid #f1f5f9; } /* 列表佔據剩餘空間 */
+            
+            .layer-4 { height: 100% !important; }
+            
+            /* 橫向滾動列表改為垂直列表 */
+            #locationScroller { 
+                flex-direction: column !important; 
+                overflow-y: auto !important; 
+                overflow-x: hidden !important;
+                padding: 1rem !important;
+                gap: 12px;
+            }
+            .loc-item { 
+                width: 100% !important; 
+                display: flex !important; 
+                align-items: center; 
+                text-align: left !important;
+                padding: 12px !important;
+                background: #fff;
+                border-radius: 16px;
+                border: 1px solid transparent;
+                transition: 0.3s;
+            }
+            .loc-item:hover { background: #f8fafc; border-color: #e2e8f0; }
+            .loc-thumb { width: 48px !important; height: 48px !important; margin: 0 !important; }
+            .loc-item p { font-size: 14px !important; margin: 0 0 0 12px !important; }
         }
 
         #map { height: 100%; width: 100%; }
 
-        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        /* 滾動條優化 */
+        .custom-scrollbar::-webkit-scrollbar { width: 5px; height: 5px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
 
-        .toast {
-            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            padding: 1rem 2rem; background: rgba(15, 23, 42, 0.95); color: white;
-            border-radius: 16px; z-index: 9999; display: none; font-weight: bold; box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-        }
-
-        .auth-modal {
-            position: fixed; inset: 0; background: rgba(15, 23, 42, 0.9);
-            display: none; align-items: center; justify-content: center; z-index: 10000; backdrop-filter: blur(10px);
-        }
-
-        .nav-active { background-color: #6366f1 !important; color: white !important; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); }
-        
-        .media-scroller { display: flex; gap: 16px; overflow-x: auto; padding: 10px 0; scroll-snap-type: x mandatory; }
-        .media-card { flex: 0 0 85%; scroll-snap-align: start; aspect-ratio: 16/9; border-radius: 20px; overflow: hidden; background: #f1f5f9; }
-        @media (min-width: 1024px) { .media-card { flex: 0 0 60%; } } /* 網頁版卡片小一點 */
+        /* 內容卡片設計 */
+        .media-scroller { display: flex; gap: 16px; overflow-x: auto; padding: 5px 0 20px; scroll-snap-type: x mandatory; }
+        .media-card { flex: 0 0 90%; scroll-snap-align: start; aspect-ratio: 16/10; border-radius: 24px; overflow: hidden; background: #f1f5f9; box-shadow: 0 10px 30px rgba(0,0,0,0.05); }
+        @media (min-width: 1024px) { .media-card { flex: 0 0 70%; } }
         
         .media-card img, .media-card video { width: 100%; height: 100%; object-fit: cover; }
 
-        .loc-item { flex: 0 0 auto; width: 100px; text-align: center; margin-right: 12px; cursor: pointer; }
-        .loc-thumb { width: 64px; height: 64px; margin: 0 auto; border-radius: 20px; object-fit: cover; border: 3px solid transparent; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
-        .loc-active .loc-thumb { border-color: #6366f1; transform: translateY(-5px); }
-        
-        .privacy-badge { font-size: 10px; padding: 4px 10px; border-radius: 6px; font-weight: 800; text-transform: uppercase; }
-        .badge-public { background: #10b981; color: white; }
-        .badge-private { background: #6366f1; color: white; }
+        /* 狀態標籤 */
+        .privacy-badge { font-size: 10px; padding: 4px 12px; border-radius: 30px; font-weight: 800; letter-spacing: 0.05em; }
+        .badge-public { background: #ecfdf5; color: #10b981; }
+        .badge-private { background: #eef2ff; color: #6366f1; }
+
+        /* 動畫 */
+        .nav-active { background-color: #6366f1 !important; color: white !important; transform: translateY(0) !important; border-color: transparent !important; }
+        .loc-active { background-color: #f0f3ff !important; border-color: #6366f1 !important; }
+
+        .toast {
+            position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+            padding: 12px 24px; background: #1e293b; color: white;
+            border-radius: 12px; z-index: 9999; display: none; font-weight: 600; font-size: 14px;
+            box-shadow: 0 15px 30px rgba(0,0,0,0.2);
+        }
+
+        .auth-modal {
+            position: fixed; inset: 0; background: rgba(15, 23, 42, 0.8);
+            display: none; align-items: center; justify-content: center; z-index: 10000; backdrop-filter: blur(8px);
+        }
     </style>
 </head>
 <body>
 
     <div id="toast" class="toast">訊息內容</div>
 
-    <!-- 驗證彈窗 -->
     <div id="authModal" class="auth-modal">
-        <div class="w-[90%] max-w-sm bg-white rounded-[2.5rem] p-10 text-center shadow-2xl">
+        <div class="w-[90%] max-w-sm bg-white rounded-[2.5rem] p-10 text-center shadow-2xl animate-in zoom-in duration-300">
             <div class="w-20 h-20 bg-indigo-50 text-indigo-600 rounded-3xl flex items-center justify-center mx-auto mb-6 text-3xl">
                 <i class="fa-solid fa-shield-heart"></i>
             </div>
@@ -93,127 +129,134 @@
             <button onclick="loginWithGoogle()" class="w-full py-4 bg-slate-900 text-white rounded-2xl font-bold active:scale-95 transition-all flex items-center justify-center gap-3">
                 <i class="fa-brands fa-google"></i> Google 登入
             </button>
-            <button onclick="closeAuthModal()" class="mt-6 text-slate-400 text-xs font-bold hover:text-slate-600 transition-colors">暫不登入，僅瀏覽</button>
+            <button onclick="closeAuthModal()" class="mt-6 text-slate-400 text-xs font-bold hover:text-slate-600 transition-colors uppercase tracking-widest">暫不登入，僅瀏覽</button>
         </div>
     </div>
 
     <div id="app-container">
-        <!-- 手機版前三層 / 網頁版左側欄 -->
         <div class="sidebar-admin">
-            <!-- 第 1 層：控制 (1/10) -->
+            <!-- 第 1 層：控制 -->
             <header class="layer-1">
                 <div class="flex items-center justify-between w-full">
                     <div id="userProfile" class="flex items-center gap-3 cursor-pointer group">
-                        <div class="w-10 h-10 rounded-2xl bg-slate-700 flex items-center justify-center text-white overflow-hidden ring-2 ring-slate-700 ring-offset-2 ring-offset-slate-800 transition-all group-hover:scale-105">
-                            <i class="fa-solid fa-user"></i>
+                        <div class="w-9 h-9 rounded-xl bg-slate-700 flex items-center justify-center text-white overflow-hidden transition-all group-hover:scale-105">
+                            <i class="fa-solid fa-user text-sm"></i>
                         </div>
                         <div class="flex flex-col">
-                            <h1 class="text-white font-black text-sm tracking-tight">足跡管理者</h1>
-                            <span id="modeStatus" class="text-[10px] text-slate-400 font-bold opacity-80">公開展區模式</span>
+                            <h1 class="text-white font-black text-xs tracking-tight">足跡管理者</h1>
+                            <span id="modeStatus" class="text-[9px] text-slate-400 font-bold opacity-80 uppercase tracking-tighter">Public View Mode</span>
                         </div>
                     </div>
-                    <button id="addBtn" onclick="addNewLocation()" class="hidden w-11 h-11 bg-indigo-600 text-white rounded-2xl items-center justify-center shadow-xl shadow-indigo-900/40 active:scale-90 transition-transform">
-                        <i class="fa-solid fa-plus text-lg"></i>
+                    <button id="addBtn" onclick="addNewLocation()" class="hidden w-9 h-9 bg-indigo-500 text-white rounded-xl items-center justify-center shadow-lg active:scale-90 transition-all">
+                        <i class="fa-solid fa-plus text-sm"></i>
                     </button>
                 </div>
             </header>
 
-            <!-- 第 2 層：地圖 (2/10) -->
+            <!-- 第 2 層：地圖 -->
             <section class="layer-2">
                 <div id="map"></div>
             </section>
 
-            <!-- 第 3 層：模式切換與列表 (2/10) -->
+            <!-- 第 3 層：列表 -->
             <section class="layer-3">
-                <div class="p-3 flex gap-3 shrink-0">
-                    <button onclick="switchViewMode('public')" id="btnPublic" class="flex-1 py-3 rounded-xl text-[12px] font-black transition-all nav-active">公開展區</button>
-                    <button onclick="switchViewMode('private')" id="btnPrivate" class="hidden flex-1 py-3 rounded-xl text-[12px] font-black text-slate-400 bg-slate-50 border border-slate-100 transition-all">我的管理</button>
+                <div class="p-3 flex gap-2 shrink-0 bg-white">
+                    <button onclick="switchViewMode('public')" id="btnPublic" class="flex-1 py-2.5 rounded-xl text-[11px] font-black transition-all nav-active">公開展區</button>
+                    <button onclick="switchViewMode('private')" id="btnPrivate" class="hidden flex-1 py-2.5 rounded-xl text-[11px] font-black text-slate-400 bg-slate-50 border border-slate-100 transition-all">我的管理</button>
                 </div>
-                <div id="locationScroller" class="flex-1 overflow-x-auto flex items-center px-4 custom-scrollbar pb-2">
-                    <!-- 地點列表自定義渲染 -->
+                <div id="locationScroller" class="flex-1 overflow-x-auto flex items-center px-4 custom-scrollbar pb-2 bg-white">
+                    <!-- 地點列表 -->
                 </div>
             </section>
         </div>
 
-        <!-- 第 4 層：內容 (5/10) / 網頁版右側欄 -->
+        <!-- 第 4 層：內容 -->
         <div class="main-content-view layer-4 custom-scrollbar">
             <div id="emptyContent" class="h-full flex flex-col items-center justify-center text-slate-300 p-12 text-center">
-                <div class="w-24 h-24 bg-slate-50 rounded-full flex items-center justify-center mb-6">
-                    <i class="fa-solid fa-paper-plane text-4xl opacity-20"></i>
+                <div class="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-6">
+                    <i class="fa-solid fa-map-location-dot text-3xl opacity-20"></i>
                 </div>
-                <h3 class="text-slate-400 font-bold text-lg">準備好出發了嗎？</h3>
-                <p class="text-slate-300 text-sm mt-2">請從左側列表選擇一個足跡</p>
+                <h3 class="text-slate-900 font-black text-lg">準備好出發了嗎？</h3>
+                <p class="text-slate-400 text-sm mt-2 font-medium">請從左側清單選擇一個足跡進行查看</p>
             </div>
 
-            <div id="mainContent" class="hidden animate-in fade-in duration-500">
-                <div class="p-8 md:p-12 space-y-8 max-w-4xl mx-auto">
-                    <!-- 標題 -->
-                    <div class="flex justify-between items-start border-b border-slate-100 pb-8">
-                        <div class="space-y-3">
+            <div id="mainContent" class="hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div class="p-6 md:p-16 space-y-8 max-w-4xl mx-auto">
+                    <!-- 標題與工具 -->
+                    <div class="flex justify-between items-start border-b border-slate-100 pb-10">
+                        <div class="space-y-4">
                             <div class="flex items-center gap-3">
-                                <span id="cDate" class="text-indigo-600 font-black text-xs tracking-widest bg-indigo-50 px-3 py-1 rounded-full"></span>
+                                <span id="cDate" class="text-indigo-600 font-black text-[10px] tracking-widest bg-indigo-50 px-3 py-1 rounded-full uppercase"></span>
                                 <span id="cBadge" class="privacy-badge"></span>
                             </div>
-                            <h2 id="cTitle" class="text-4xl md:text-5xl font-black text-slate-900 tracking-tight leading-tight"></h2>
+                            <h2 id="cTitle" class="text-4xl md:text-6xl font-black text-slate-900 tracking-tighter leading-tight"></h2>
                         </div>
-                        <div id="adminTools" class="hidden flex gap-3">
-                            <button onclick="toggleEditMode()" class="w-12 h-12 bg-slate-100 text-slate-600 rounded-2xl flex items-center justify-center hover:bg-slate-200 transition-colors"><i class="fa-solid fa-pen-to-square"></i></button>
-                            <button onclick="quickToggleVisibility()" id="cVisibilityBtn" class="w-12 h-12 bg-slate-100 text-slate-600 rounded-2xl flex items-center justify-center hover:bg-slate-200 transition-colors"><i class="fa-solid fa-eye-slash"></i></button>
+                        <div id="adminTools" class="hidden flex gap-2">
+                            <button onclick="toggleEditMode()" class="w-10 h-10 bg-slate-100 text-slate-600 rounded-xl flex items-center justify-center hover:bg-slate-200 transition-colors"><i class="fa-solid fa-pen text-sm"></i></button>
+                            <button onclick="quickToggleVisibility()" id="cVisibilityBtn" class="w-10 h-10 bg-slate-100 text-slate-600 rounded-xl flex items-center justify-center hover:bg-slate-200 transition-colors"><i class="fa-solid fa-eye-slash text-sm"></i></button>
                         </div>
                     </div>
 
-                    <!-- 媒體 -->
-                    <div id="cMedia" class="media-scroller"></div>
+                    <!-- 媒體區 -->
+                    <div id="cMedia" class="media-scroller custom-scrollbar"></div>
 
-                    <!-- 故事 -->
-                    <div class="space-y-6">
+                    <!-- 故事區 -->
+                    <div class="space-y-8">
                         <div class="flex items-center gap-4">
-                            <span class="text-xs font-black text-slate-400 uppercase tracking-widest">The Story</span>
+                            <span class="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">The Story</span>
                             <div class="flex-1 h-[1px] bg-slate-100"></div>
                         </div>
-                        <p id="cDesc" class="text-slate-600 text-lg leading-loose font-light whitespace-pre-wrap"></p>
+                        <p id="cDesc" class="text-slate-600 text-lg md:text-xl leading-relaxed font-medium whitespace-pre-wrap"></p>
+                    </div>
+                    
+                    <div class="pt-10 border-t border-slate-50 flex items-center justify-between text-slate-400">
+                        <span class="text-[10px] font-bold uppercase tracking-widest">End of Record</span>
+                        <div class="flex gap-4">
+                             <i class="fa-brands fa-instagram"></i>
+                             <i class="fa-brands fa-facebook"></i>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- 編輯模式 -->
-            <div id="editMode" class="hidden p-8 md:p-12 space-y-8 bg-slate-50 min-h-full">
-                <div class="max-w-2xl mx-auto space-y-8">
+            <!-- 編輯模式 (優化寬度) -->
+            <div id="editMode" class="hidden p-6 md:p-16 space-y-8 bg-slate-50 min-h-full">
+                <div class="max-w-xl mx-auto space-y-8">
                     <div class="flex items-center justify-between">
-                        <h3 class="text-2xl font-black text-slate-900">編輯足跡內容</h3>
+                        <h3 class="text-2xl font-black text-slate-900">編輯足跡</h3>
                         <label class="flex items-center gap-3 cursor-pointer">
-                            <span class="text-xs font-bold text-slate-500">設為公開</span>
-                            <input type="checkbox" id="ePublic" class="w-6 h-6 rounded-lg accent-indigo-600">
+                            <span class="text-xs font-bold text-slate-500">公開展示</span>
+                            <input type="checkbox" id="ePublic" class="w-5 h-5 rounded-lg accent-indigo-600">
                         </label>
                     </div>
                     
-                    <div class="space-y-6">
+                    <div class="space-y-5">
                         <div class="group">
-                            <label class="text-[10px] font-black text-slate-400 uppercase mb-2 block">地點名稱</label>
-                            <input type="text" id="eTitle" class="w-full p-5 rounded-2xl border-2 border-transparent bg-white shadow-sm focus:border-indigo-500 outline-none transition-all font-bold text-lg" placeholder="去過哪裡呢？">
+                            <label class="text-[10px] font-black text-slate-400 uppercase mb-2 block tracking-widest">地點名稱</label>
+                            <input type="text" id="eTitle" class="w-full p-4 rounded-2xl border-2 border-transparent bg-white shadow-sm focus:border-indigo-500 outline-none transition-all font-bold text-lg" placeholder="目的地">
                         </div>
                         <div class="group">
-                            <label class="text-[10px] font-black text-slate-400 uppercase mb-2 block">旅程日期</label>
-                            <input type="date" id="eDate" class="w-full p-5 rounded-2xl border-2 border-transparent bg-white shadow-sm focus:border-indigo-500 outline-none transition-all font-bold">
+                            <label class="text-[10px] font-black text-slate-400 uppercase mb-2 block tracking-widest">日期</label>
+                            <input type="date" id="eDate" class="w-full p-4 rounded-2xl border-2 border-transparent bg-white shadow-sm focus:border-indigo-500 outline-none transition-all font-bold">
                         </div>
                         <div class="group">
-                            <label class="text-[10px] font-black text-slate-400 uppercase mb-2 block">心得故事</label>
-                            <textarea id="eDesc" rows="8" class="w-full p-5 rounded-2xl border-2 border-transparent bg-white shadow-sm focus:border-indigo-500 outline-none transition-all text-base leading-relaxed" placeholder="記錄當下的感受..."></textarea>
+                            <label class="text-[10px] font-black text-slate-400 uppercase mb-2 block tracking-widest">旅程心得</label>
+                            <textarea id="eDesc" rows="6" class="w-full p-4 rounded-2xl border-2 border-transparent bg-white shadow-sm focus:border-indigo-500 outline-none transition-all text-base leading-relaxed" placeholder="寫點什麼吧..."></textarea>
                         </div>
                     </div>
 
                     <div class="space-y-4">
-                        <label class="text-[10px] font-black text-slate-400 uppercase block">相簿與影片 (網址)</label>
+                        <label class="text-[10px] font-black text-slate-400 uppercase block tracking-widest">媒體連結 (圖片網址)</label>
                         <div id="eMediaList" class="space-y-3"></div>
-                        <button onclick="addMediaField()" class="w-full py-5 border-2 border-dashed border-slate-200 rounded-2xl text-slate-400 text-sm font-bold hover:border-indigo-300 hover:text-indigo-400 transition-all bg-white/50">+ 新增多媒體連結</button>
+                        <button onclick="addMediaField()" class="w-full py-4 border-2 border-dashed border-slate-200 rounded-2xl text-slate-400 text-xs font-black hover:border-indigo-300 hover:text-indigo-400 transition-all bg-white/50">+ 新增多媒體</button>
                     </div>
 
                     <div class="flex gap-4 pt-6">
-                        <button onclick="saveChanges()" class="flex-[2] py-5 bg-indigo-600 text-white font-black rounded-2xl shadow-2xl shadow-indigo-200 hover:bg-indigo-700 transition-all">確認儲存</button>
-                        <button onclick="toggleEditMode()" class="flex-1 py-5 bg-white text-slate-400 font-bold rounded-2xl border border-slate-200 hover:bg-slate-50 transition-all">取消</button>
+                        <button onclick="saveChanges()" class="flex-[2] py-4 bg-indigo-600 text-white font-black rounded-2xl shadow-xl shadow-indigo-200 hover:bg-indigo-700 transition-all">儲存更改</button>
+                        <button onclick="toggleEditMode()" class="flex-1 py-4 bg-white text-slate-400 font-bold rounded-2xl border border-slate-200">取消</button>
                     </div>
                     
-                    <button onclick="deleteLoc()" class="w-full py-4 text-rose-400 font-bold text-xs uppercase tracking-[0.3em] hover:text-rose-600 transition-colors">刪除此足跡數據</button>
+                    <button onclick="deleteLoc()" class="w-full py-4 text-rose-400 font-bold text-[10px] uppercase tracking-[0.3em] hover:text-rose-600">刪除此足跡</button>
                 </div>
             </div>
         </div>
@@ -224,6 +267,7 @@
         import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, doc, setDoc, addDoc, onSnapshot, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
+        // Firebase Config
         const firebaseConfig = {
             apiKey: "AIzaSyBFBhaRtjzBcav9dI7TfNt0E2ZjjUW1b28",
             authDomain: "mytraveljournal-74571.firebaseapp.com",
@@ -253,7 +297,7 @@
         setVh();
 
         function initMap() {
-            map = L.map('map', { center: [23.6, 121], zoom: 7, zoomControl: false });
+            map = L.map('map', { center: [22.3193, 114.1694], zoom: 11, zoomControl: false });
             L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png').addTo(map);
             markersLayer = L.layerGroup().addTo(map);
         }
@@ -265,7 +309,7 @@
 
             if (user) {
                 profile.querySelector('div').innerHTML = `<img src="${user.photoURL}" class="w-full h-full object-cover">`;
-                profile.onclick = () => { if(confirm("確定要登出管理員嗎？")) signOut(auth); };
+                profile.onclick = () => { if(confirm("確定要登出嗎？")) signOut(auth); };
                 addBtn.style.display = 'flex';
                 btnPriv.classList.remove('hidden');
                 switchViewMode('private');
@@ -281,9 +325,9 @@
         window.switchViewMode = (mode) => {
             viewMode = mode;
             const isPub = mode === 'public';
-            document.getElementById('btnPublic').className = isPub ? 'flex-1 py-3 rounded-xl text-[12px] font-black transition-all nav-active' : 'flex-1 py-3 rounded-xl text-[12px] font-black text-slate-400 bg-slate-50 border border-slate-100';
-            document.getElementById('btnPrivate').className = !isPub ? 'flex-1 py-3 rounded-xl text-[12px] font-black transition-all nav-active' : 'flex-1 py-3 rounded-xl text-[12px] font-black text-slate-400 bg-slate-50 border border-slate-100';
-            document.getElementById('modeStatus').innerText = isPub ? '公開展區模式' : '管理者模式';
+            document.getElementById('btnPublic').className = isPub ? 'flex-1 py-2.5 rounded-xl text-[11px] font-black transition-all nav-active' : 'flex-1 py-2.5 rounded-xl text-[11px] font-black text-slate-400 bg-slate-50 border border-slate-100';
+            document.getElementById('btnPrivate').className = !isPub ? 'flex-1 py-2.5 rounded-xl text-[11px] font-black transition-all nav-active' : 'flex-1 py-2.5 rounded-xl text-[11px] font-black text-slate-400 bg-slate-50 border border-slate-100';
+            document.getElementById('modeStatus').innerText = isPub ? 'Public View Mode' : 'Admin Dashboard';
             document.getElementById('addBtn').style.display = (!isPub && auth.currentUser) ? 'flex' : 'none';
             resetDetail(); loadData();
         };
@@ -309,7 +353,12 @@
                 const div = document.createElement('div');
                 div.className = `loc-item ${currentId === loc.id ? 'loc-active' : ''}`;
                 const thumb = (loc.media && loc.media[0]) ? convertUrl(loc.media[0].url) : 'https://ui-avatars.com/api/?name=Trip&background=random';
-                div.innerHTML = `<img src="${thumb}" class="loc-thumb shadow-md"><p class="text-[10px] font-bold mt-2 text-slate-600 truncate px-1">${loc.title}</p>`;
+                
+                // 網頁版與手機版 HTML 結構可共用，樣式由 CSS 媒介查詢控制
+                div.innerHTML = `
+                    <img src="${thumb}" class="loc-thumb shadow-md">
+                    <p class="text-[10px] font-bold mt-2 text-slate-600 truncate px-1">${loc.title}</p>
+                `;
                 div.onclick = () => selectLoc(loc.id);
                 container.appendChild(div);
             });
@@ -328,9 +377,9 @@
             document.getElementById('adminTools').style.display = isAdmin ? 'flex' : 'none';
 
             document.getElementById('cTitle').innerText = loc.title;
-            document.getElementById('cDate').innerText = loc.date || "未設定日期";
-            document.getElementById('cDesc').innerText = loc.description || "這裡還沒有故事...";
-            document.getElementById('cVisibilityBtn').innerHTML = loc.isPublic ? '<i class="fa-solid fa-eye-slash"></i>' : '<i class="fa-solid fa-eye text-emerald-500"></i>';
+            document.getElementById('cDate').innerText = loc.date || "NO DATE";
+            document.getElementById('cDesc').innerText = loc.description || "暫無故事內容...";
+            document.getElementById('cVisibilityBtn').innerHTML = loc.isPublic ? '<i class="fa-solid fa-eye-slash text-sm"></i>' : '<i class="fa-solid fa-eye text-emerald-500 text-sm"></i>';
 
             const badge = document.getElementById('cBadge');
             badge.innerText = loc.isPublic ? "Public" : "Private";
@@ -339,20 +388,21 @@
             const mediaBox = document.getElementById('cMedia');
             mediaBox.innerHTML = '';
             (loc.media || []).forEach(m => {
-                const card = document.createElement('div'); card.className = 'media-card shadow-2xl';
+                const card = document.createElement('div'); card.className = 'media-card';
                 const url = convertUrl(m.url);
-                card.innerHTML = m.type === 'image' ? `<img src="${url}">` : `<video src="${url}" controls></video>`;
+                card.innerHTML = `<img src="${url}" loading="lazy">`;
                 mediaBox.appendChild(card);
             });
 
-            map.flyTo([loc.lat, loc.lng], 13);
+            map.flyTo([loc.lat, loc.lng], 14, { duration: 1.5 });
             renderList(); updateMarkers();
         }
 
         window.quickToggleVisibility = async () => {
             const loc = locations.find(l => l.id === currentId);
             const newState = !loc.isPublic;
-            await setDoc(doc(db, 'artifacts', appId, 'users', auth.currentUser.uid, 'locations', currentId), { isPublic: newState }, { merge: true });
+            const userRef = doc(db, 'artifacts', appId, 'users', auth.currentUser.uid, 'locations', currentId);
+            await setDoc(userRef, { isPublic: newState }, { merge: true });
             
             const pubRef = doc(db, 'artifacts', appId, 'public', 'data', 'locations', currentId);
             if (newState) {
@@ -360,7 +410,7 @@
             } else {
                 await deleteDoc(pubRef).catch(() => {});
             }
-            showToast(newState ? "已公開展示" : "已轉為私密");
+            showToast(newState ? "已發佈至公開展區" : "已從公開展區移除");
         };
 
         window.toggleEditMode = () => {
@@ -381,10 +431,10 @@
         };
 
         window.addMediaField = (val = '') => {
-            const div = document.createElement('div'); div.className = 'flex gap-3';
+            const div = document.createElement('div'); div.className = 'flex gap-2';
             div.innerHTML = `
-                <input type="text" class="flex-1 p-4 bg-white border border-slate-100 rounded-xl text-sm shadow-sm" placeholder="貼上圖片網址" value="${val}">
-                <button onclick="this.parentElement.remove()" class="text-rose-400 hover:text-rose-600 transition-colors px-2"><i class="fa-solid fa-trash-can"></i></button>
+                <input type="text" class="flex-1 p-3 bg-white border border-slate-100 rounded-xl text-xs" placeholder="https://..." value="${val}">
+                <button onclick="this.parentElement.remove()" class="text-rose-400 px-2"><i class="fa-solid fa-xmark"></i></button>
             `;
             document.getElementById('eMediaList').appendChild(div);
         };
@@ -406,13 +456,13 @@
             const pubRef = doc(db, 'artifacts', appId, 'public', 'data', 'locations', currentId);
             if (isPublic) await setDoc(pubRef, data); else await deleteDoc(pubRef).catch(() => {});
             
-            showToast("足跡已更新"); toggleEditMode();
+            showToast("足跡資料已儲存"); toggleEditMode();
         };
 
         window.addNewLocation = async () => {
             const center = map.getCenter();
             const res = await addDoc(collection(db, 'artifacts', appId, 'users', auth.currentUser.uid, 'locations'), {
-                title: "新的足跡", date: new Date().toISOString().split('T')[0],
+                title: "新地點", date: new Date().toISOString().split('T')[0],
                 lat: center.lat, lng: center.lng, media: [], isPublic: false,
                 userId: auth.currentUser.uid
             });
@@ -420,10 +470,10 @@
         };
 
         window.deleteLoc = async () => {
-            if(!confirm("確定要永遠刪除此足跡嗎？")) return;
+            if(!confirm("確定要永久刪除此足跡數據嗎？")) return;
             await deleteDoc(doc(db, 'artifacts', appId, 'users', auth.currentUser.uid, 'locations', currentId));
             await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'locations', currentId)).catch(()=>{});
-            resetDetail(); showToast("已刪除足跡");
+            resetDetail(); showToast("數據已刪除");
         };
 
         function resetDetail() {
@@ -437,7 +487,7 @@
             markersLayer.clearLayers();
             locations.forEach(loc => {
                 const icon = L.divIcon({
-                    html: `<div class="relative transition-transform duration-300 ${currentId===loc.id?'scale-125':''}"><i class="fa-solid fa-location-dot ${currentId===loc.id?'text-indigo-600':'text-rose-500'} text-2xl drop-shadow-lg"></i>${loc.isPublic && viewMode==='private'?'<div class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-400 rounded-full border-2 border-white"></div>':''}</div>`,
+                    html: `<div class="relative transition-all duration-300 ${currentId===loc.id?'scale-125':''}"><i class="fa-solid fa-location-dot ${currentId===loc.id?'text-indigo-600':'text-rose-500'} text-2xl drop-shadow-lg"></i></div>`,
                     className: '', iconAnchor: [12, 24]
                 });
                 L.marker([loc.lat, loc.lng], { icon }).addTo(markersLayer).on('click', () => selectLoc(loc.id));
